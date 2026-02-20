@@ -53,7 +53,7 @@ const Index = () => {
                 </Button>
               </Link>
               <Link to="/tournaments">
-                <Button size="lg" variant="outline" className="gap-2 border-background/30 text-background hover:bg-background/10">
+                <Button size="lg" variant="outline" className="gap-2 border-2 border-white bg-transparent text-white font-bold hover:bg-white/20 hover:text-white">
                   View Tournaments
                 </Button>
               </Link>
@@ -140,7 +140,7 @@ const Index = () => {
               </Button>
             </Link>
             <Link to="/tournaments">
-              <Button size="lg" variant="outline" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 font-semibold">
+              <Button size="lg" variant="outline" className="gap-2 border-2 border-white bg-transparent text-white font-bold hover:bg-white/20 hover:text-white">
                 Join a Tournament
               </Button>
             </Link>

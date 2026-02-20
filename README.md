@@ -1,22 +1,302 @@
-# Welcome to your Lovable project
+-- BLUEPRINT -- 
+🌐 PUBLIC SIDE (Customer-Facing)
+1️⃣ Home Page
 
-## Project info
+Purpose: Introduction + quick access
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Features:
 
-## How can I edit this code?
+Arena name (from config)
 
-There are several ways of editing your application.
+Logo (config-driven)
 
-**Use Lovable**
+Hero section
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+Call-to-action: “Book Now”
 
-Changes made via Lovable will be committed automatically to this repo.
+Featured facilities preview
 
-**Use your preferred IDE**
+Upcoming tournaments preview
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Contact information
+
+Opening hours
+
+Quick navigation links
+
+2️⃣ Facilities Listing Page
+
+Purpose: Show all rentable facilities
+
+Features:
+
+List of facilities
+
+Facility type filter (football, snooker, playground, etc.)
+
+Price per hour display
+
+Availability indicator (UI-level)
+
+“View Details” button
+
+Search functionality
+
+Sort by price
+
+3️⃣ Facility Details Page
+
+Purpose: Detailed facility view + booking entry
+
+Features:
+
+Facility name
+
+Type
+
+Description
+
+Price per hour
+
+Image gallery
+
+Opening hours
+
+Time slot selector (date picker + hourly grid)
+
+Selected time preview
+
+“Book Now” button
+
+4️⃣ Booking Page (Customer Flow)
+
+Purpose: Confirm booking
+
+Features:
+
+Selected facility summary
+
+Selected date & time
+
+Price calculation (hours × rate)
+
+Customer details form
+
+Booking status preview
+
+Optional payment status indicator (UI only for now)
+
+Confirmation modal
+
+Booking success page
+
+5️⃣ Tournament Listing Page
+
+Purpose: Show active and upcoming tournaments
+
+Features:
+
+Tournament cards
+
+Filter by sport type
+
+Status badge (upcoming, ongoing, completed)
+
+Prize display
+
+Start date
+
+“View Details” button
+
+6️⃣ Tournament Details Page
+
+Purpose: Full tournament overview
+
+Features:
+
+Tournament info
+
+Sport type
+
+Prize
+
+Status
+
+Registered teams list
+
+Bracket view (if generated)
+
+Match list with scores
+
+“Register Team” button (if open)
+
+7️⃣ Team Registration Page
+
+Purpose: Register a team into tournament
+
+Features:
+
+Team name input
+
+Team manager details
+
+Confirmation modal
+
+Registration success state
+
+8️⃣ Login / Role Selection (Frontend Simulation)
+
+Purpose: Simulate different user roles
+
+Features:
+
+Role selection (Admin, Staff, Customer, Team Manager)
+
+Store role in state
+
+Permission-based UI rendering
+
+🛠 ADMIN DASHBOARD
+9️⃣ Dashboard Home
+
+Purpose: Overview
+
+Features:
+
+Total bookings
+
+Active tournaments
+
+Total facilities
+
+Upcoming sessions today
+
+Quick action buttons
+
+Revenue summary (UI only for now)
+
+🔟 Facilities Management Page
+
+Purpose: CRUD UI for facilities
+
+Features:
+
+Table of facilities
+
+Add facility modal
+
+Edit facility modal
+
+Enable/disable facility
+
+Set price per hour
+
+Set facility type
+
+1️⃣1️⃣ Bookings Management Page
+
+Purpose: Manage all bookings
+
+Features:
+
+Booking table
+
+Filter by:
+
+Date
+
+Facility
+
+Status
+
+Change booking status
+
+Cancel booking
+
+Mark completed
+
+Search by customer name
+
+1️⃣2️⃣ Calendar View Page
+
+Purpose: Visual booking schedule
+
+Features:
+
+Daily view
+
+Weekly view
+
+Hourly time grid
+
+Facility column separation
+
+Visual booking blocks
+
+Click booking to view details
+
+This is one of your most important UI components.
+
+1️⃣3️⃣ Tournaments Management Page
+
+Purpose: Admin tournament control
+
+Features:
+
+Create tournament
+
+Edit tournament
+
+Change status
+
+Delete tournament
+
+Generate fixtures (UI logic)
+
+View tournament bracket
+
+1️⃣4️⃣ Teams Management Page
+
+Purpose: Manage registered teams
+
+Features:
+
+Team list
+
+View by tournament
+
+Remove team
+
+Edit team details
+
+1️⃣5️⃣ Matches Management Page
+
+Purpose: Record match results
+
+Features:
+
+Match list
+
+Input scores
+
+Update scores
+
+Auto update tournament status (UI logic)
+
+1️⃣6️⃣ User Management Page (Optional for Phase 1)
+
+Purpose: Manage users
+
+Features:
+
+List users
+
+Assign role
+
+Enable/disable user
+
+Filter by role
+
 
 The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
