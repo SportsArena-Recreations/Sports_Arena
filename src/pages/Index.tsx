@@ -232,7 +232,7 @@ const Index = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="lg:col-span-2 lg:row-span-2 rounded-[2rem] border border-white/10 p-10 md:p-12 relative overflow-hidden group flex flex-col justify-end min-h-[400px]"
+              className="lg:col-span-2 lg:row-span-2 rounded-[2rem] border border-white/10 p-6 sm:p-8 md:p-12 relative overflow-hidden group flex flex-col justify-end min-h-[350px] md:min-h-[400px]"
             >
               {/* Background Image Layer */}
               <div className="absolute inset-0 z-0">
@@ -260,7 +260,7 @@ const Index = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="lg:col-span-2 lg:row-span-1 rounded-[2rem] bg-[#0a0a0a] border border-white/5 p-8 md:p-10 relative overflow-hidden group flex items-start flex-col justify-center"
+              className="lg:col-span-2 lg:row-span-1 rounded-[2rem] bg-[#0a0a0a] border border-white/5 p-6 sm:p-8 md:p-12 relative overflow-hidden group flex items-start flex-col justify-center"
             >
               <div className="absolute bottom-0 right-0 p-8 opacity-10 group-hover:opacity-30 group-hover:-translate-y-4 transition-all duration-700">
                 <Dumbbell size={140} strokeWidth={0.5} />
@@ -278,7 +278,7 @@ const Index = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.6, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="lg:col-span-1 lg:row-span-1 rounded-[2rem] border border-white/10 p-8 relative overflow-hidden group flex flex-col justify-between"
+              className="lg:col-span-1 lg:row-span-1 rounded-[2rem] border border-white/10 p-6 sm:p-8 relative overflow-hidden group flex flex-col justify-between"
             >
               {/* Background Image Layer */}
               <div className="absolute inset-0 z-0">
@@ -351,8 +351,8 @@ const Index = () => {
       </section >
 
       {/* Facilities Section */}
-      < section className="py-20 md:py-32 px-6 border-t border-white/5" >
-        <div className="container mx-auto max-w-6xl">
+      <section className="py-20 md:py-32 border-t border-white/5">
+        <div className="container mx-auto max-w-6xl px-6">
           <div className="mb-16 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -360,7 +360,7 @@ const Index = () => {
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             >
-              <h2 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4">The Venues.</h2>
+              <h2 className="text-4xl md:text-6xl font-bold tracking-tighter mb-4 text-white">The Venues.</h2>
               <p className="text-xl md:text-2xl text-white/50 tracking-tight">Engineered for peak performance.</p>
             </motion.div>
             <motion.div
@@ -374,24 +374,24 @@ const Index = () => {
               </Link>
             </motion.div>
           </div>
+        </div>
 
-          <div className="relative w-full overflow-hidden flex flex-col justify-center py-10 -mx-6 px-6">
-            {/* Extended Dark Masking Edges for deep fade out */}
-            <div className="absolute left-0 top-0 bottom-0 w-32 md:w-80 bg-gradient-to-r from-black via-black/90 to-transparent z-10 pointer-events-none" />
-            <div className="absolute right-0 top-0 bottom-0 w-32 md:w-80 bg-gradient-to-l from-black via-black/90 to-transparent z-10 pointer-events-none" />
+        {/* Marquee Full-Bleed Container */}
+        <div className="relative w-full max-w-[100vw] overflow-hidden flex flex-col justify-center py-6">
+          {/* Extended Dark Masking Edges */}
+          <div className="absolute left-0 top-0 bottom-0 w-16 md:w-64 bg-gradient-to-r from-background via-background/90 to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-16 md:w-64 bg-gradient-to-l from-background via-background/90 to-transparent z-10 pointer-events-none" />
 
-            {/* Auto-scrolling Infinite Marquee */}
-            <motion.div
-              className="flex gap-6 md:gap-8 w-max"
-              animate={{ x: ["0%", "-50%"] }}
-              transition={{ duration: 40, ease: "linear", repeat: Infinity }}
-            >
-              {[...facilities, ...facilities, ...facilities, ...facilities, ...facilities].map((f, i) => (
-                <div key={`${f.id}-${i}`} className="w-[320px] md:w-[450px] flex-shrink-0 group/card">
-                  <FacilityCard facility={f} />
-                </div>
-              ))}
-            </motion.div>
+          {/* Auto-scrolling ZERO-LAG Native CSS Marquee */}
+          <div className="flex gap-4 md:gap-8 w-max pl-4 animate-marquee">
+            {[...facilities, ...facilities, ...facilities, ...facilities, ...facilities, ...facilities].map((f, i) => (
+              <div
+                key={`${f.id}-${i}`}
+                className="w-[280px] md:w-[450px] flex-shrink-0 group/card"
+              >
+                <FacilityCard facility={f} />
+              </div>
+            ))}
           </div>
         </div>
       </section >
@@ -466,7 +466,24 @@ const Index = () => {
                 transition={{ duration: 0.7, delay: i * 0.2, ease: [0.16, 1, 0.3, 1] }}
                 className="relative flex flex-col items-center text-center group"
               >
-                <div className="w-24 h-24 mb-8" />
+                {/* Desktop Spacer (since the ball rolls on top) */}
+                <div className="hidden md:block w-24 h-24 mb-8" />
+
+                {/* Mobile Static Number (Matches the 8-Ball visually) */}
+                <div className="md:hidden relative w-20 h-20 mb-6">
+                  <div className="absolute inset-0 rounded-full bg-[#111] overflow-hidden border border-white/5">
+                    <div className="w-full h-[2px] bg-black/50 absolute top-1/2 left-0 -translate-y-1/2 rotate-45" />
+                    <div className="w-[2px] h-full bg-black/50 absolute top-0 left-1/2 -translate-x-1/2 rotate-45" />
+                    <div className="w-full h-[2px] bg-black/30 absolute top-1/2 left-0 -translate-y-1/2 -rotate-45" />
+                    <div className="w-[2px] h-full bg-black/30 absolute top-0 left-1/2 -translate-x-1/2 -rotate-45" />
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center font-black">
+                    <div className="relative bg-white text-black font-sans text-xl w-10 h-10 rounded-full flex items-center justify-center shadow-[inset_0_0_5px_rgba(0,0,0,0.5),_0_0_15px_rgba(255,255,255,0.1)]">
+                      {item.step}
+                    </div>
+                  </div>
+                </div>
+
                 <h3 className="text-2xl font-bold tracking-tight mb-4 text-white group-hover:text-white/90 transition-colors">
                   {item.title}
                 </h3>
