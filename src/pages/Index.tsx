@@ -56,79 +56,27 @@ const Index = () => {
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             className="text-5xl sm:text-6xl md:text-8xl lg:text-[7.5rem] font-bold tracking-tighter mb-6 md:mb-8 leading-[1.1] md:leading-[1.0] flex items-center justify-center font-display"
           >
-            <TypewriterText
-              texts={["Elevate your game.", "Dominate the pitch.", "Train like a pro.", "Master your craft."]}
-              className="text-white block bg-clip-text"
-              cursorClassName="bg-white w-[3px] md:w-[7px] h-[0.9em] md:h-[0.85em] align-middle inline-block rounded-full ml-1 md:ml-2"
-              cursorChar=""
-            />
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="text-lg md:text-2xl text-white/50 max-w-2xl mx-auto mb-10 md:mb-12 font-medium tracking-tight px-4 md:px-0"
-          >
-            Book world-class facilities and join premium tournaments. Built to inspire athletes across Africa and beyond.
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full sm:w-auto"
-          >
-            <Link
-              to="/facilities"
-              className="w-full sm:w-auto px-8 py-4 sm:py-4 rounded-full bg-white text-black font-semibold tracking-tight hover:scale-[0.98] transition-transform flex items-center justify-center gap-2"
-            >
-              Book a Facility
-              <ArrowRight size={18} />
-            </Link>
-            <Link
-              to="/tournaments"
-              className="w-full sm:w-auto px-8 py-4 sm:py-4 rounded-full bg-transparent border border-white/20 text-white font-semibold tracking-tight hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
-            >
-              Explore Tournaments
-            </Link>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Sports Offered Marquee */}
-      <section className="py-16 border-b border-white/5 overflow-hidden bg-[#020202]">
-        <div className="container mx-auto px-6 mb-8 text-center text-xs font-semibold tracking-widest uppercase text-white/30">
-          World-Class Facilities For
-        </div>
-        <div className="flex justify-center gap-8 md:gap-16 opacity-40 mix-blend-screen text-xl md:text-2xl font-bold font-display tracking-tight text-white flex-wrap text-center items-center">
-          <span>BASKETBALL</span>
-          <span className="text-white/20 hidden md:block">•</span>
-          <span>SOCCER</span>
-          <span className="text-white/20 hidden md:block">•</span>
-          <span>TENNIS</span>
-          <span className="text-white/20 hidden md:block">•</span>
-          <span>VOLLEYBALL</span>
-          <span className="text-white/20 hidden md:block">•</span>
-          <span>SWIMMING</span>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <motion.section
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.8 }}
-        className="py-16 md:py-20 bg-[#060606] border-b border-white/5"
-      >
-        <div className="container mx-auto px-6 max-w-5xl">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-y-12 md:gap-y-0 divide-x-0 md:divide-x divide-white/10 text-center">
-            <div className="flex flex-col items-center justify-center">
-              <div className="text-4xl md:text-5xl font-bold tracking-tighter mb-2 text-white">6+</div>
-              <div className="text-xs font-semibold text-white/40 tracking-widest uppercase">Premium Facilities</div>
-            </div>
-            <div className="flex flex-col items-center justify-center">
-              <div className="text-4xl md:text-5xl font-bold tracking-tighter mb-2 text-white">20+</div>
-              <div className="text-xs font-semibold text-white/40 tracking-widest uppercase">Tournaments / Year</div>
+            <span className="mb-4 inline-block rounded-full bg-accent/20 px-4 py-1.5 text-sm font-semibold text-accent">
+              {arenaConfig.tagline}
+            </span>
+            <h1 className="font-display text-4xl font-extrabold tracking-tight text-background md:text-6xl">
+              {arenaConfig.name}
+            </h1>
+            <p className="mt-4 text-lg text-background/80 max-w-lg">
+              Book world-class facilities, join tournaments, and elevate your game at the premier sports destination.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-4">
+              <Link to="/facilities">
+                <Button size="lg" className="gap-2 font-semibold">
+                  Book a Facility
+                  <ArrowRight size={18} />
+                </Button>
+              </Link>
+              <Link to="/tournaments">
+                <Button size="lg" variant="outline" className="gap-2 border-2 border-white bg-transparent text-white font-bold hover:bg-white/20 hover:text-white">
+                  View Tournaments
+                </Button>
+              </Link>
             </div>
             <div className="flex flex-col items-center justify-center">
               <div className="text-4xl md:text-5xl font-bold tracking-tighter mb-2 text-white">17<span className="text-2xl">h</span></div>
@@ -274,28 +222,25 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Footer / CTA */}
-      <section className="relative py-24 md:py-48 px-6 bg-black overflow-hidden border-t border-white/5">
-        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-        <div className="absolute top-0 inset-x-0 h-[500px] bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
-        <div className="absolute left-1/2 -top-40 -translate-x-1/2 w-[600px] h-[300px] bg-white/[0.05] blur-[100px] rounded-full pointer-events-none" />
-
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="container mx-auto text-center max-w-3xl relative z-10"
-        >
-          <h2 className="text-5xl md:text-7xl font-bold tracking-tighter mb-4 md:mb-6">Ready to play?</h2>
-          <p className="text-lg md:text-2xl text-white/50 mb-10 md:mb-12 tracking-tight">Step into the arena. Experience sports like never before.</p>
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-            <Link
-              to="/facilities"
-              className="inline-flex w-full sm:w-auto px-10 py-5 rounded-full bg-white text-black font-semibold tracking-tight hover:scale-[0.98] transition-transform text-lg items-center justify-center relative overflow-hidden group"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-black/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 pointer-events-none" />
-              Start Booking
+      {/* CTA */}
+      <section className="hero-gradient py-20">
+        <div className="container text-center">
+          <h2 className="font-display text-3xl font-bold text-primary-foreground md:text-4xl">
+            Ready to Play?
+          </h2>
+          <p className="mx-auto mt-3 max-w-md text-primary-foreground/80">
+            Book your facility today or register your team for the next tournament.
+          </p>
+          <div className="mt-8 flex justify-center gap-4">
+            <Link to="/facilities">
+              <Button size="lg" variant="secondary" className="font-semibold">
+                Book Now
+              </Button>
+            </Link>
+            <Link to="/tournaments">
+              <Button size="lg" variant="outline" className="gap-2 border-2 border-white bg-transparent text-white font-bold hover:bg-white/20 hover:text-white">
+                Join a Tournament
+              </Button>
             </Link>
           </div>
         </motion.div>
