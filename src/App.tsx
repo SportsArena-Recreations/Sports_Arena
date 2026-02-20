@@ -26,9 +26,11 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          {/* Public routes */}
+          {/* Public Landing */}
+          <Route path="/" element={<Index />} />
+
+          {/* Public routes with Navbar */}
           <Route element={<PublicLayout />}>
-            <Route path="/" element={<Index />} />
             <Route path="/facilities" element={<Facilities />} />
             <Route path="/facilities/:id" element={<FacilityDetail />} />
             <Route path="/tournaments" element={<Tournaments />} />

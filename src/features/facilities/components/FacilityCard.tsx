@@ -21,35 +21,35 @@ export function FacilityCard({ facility }: FacilityCardProps) {
   return (
     <Link
       to={`/facilities/${facility.id}`}
-      className="group block rounded-xl border border-border bg-card card-shadow transition-all duration-300 hover:card-shadow-hover hover:-translate-y-1"
+      className="group block"
     >
-      <div className="relative h-48 overflow-hidden rounded-t-xl bg-muted">
-        <div className="absolute inset-0 flex items-center justify-center text-6xl bg-gradient-to-br from-primary/10 to-accent/10">
+      <div className="relative h-64 w-full overflow-hidden rounded-2xl bg-[#111] border border-white/5 mb-5 flex items-center justify-center">
+        <div className="text-7xl opacity-80 mix-blend-luminosity grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-300">
           {sportIcons[facility.type] || "🏟️"}
         </div>
-        <div className="absolute right-3 top-3">
+        <div className="absolute right-4 top-4">
           <StatusBadge status={facility.status} />
         </div>
       </div>
-      <div className="p-5">
-        <h3 className="font-display text-lg font-bold group-hover:text-primary transition-colors">
+      <div>
+        <h3 className="text-xl md:text-2xl font-semibold tracking-tight text-white mb-2 group-hover:text-white/80 transition-colors">
           {facility.name}
         </h3>
-        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+        <p className="text-white/50 leading-relaxed mb-4 line-clamp-2 text-sm md:text-base">
           {facility.description}
         </p>
-        <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Users size={14} />
+        <div className="flex items-center gap-6 text-sm font-medium text-white/40">
+          <span className="flex items-center gap-1.5">
+            <Users size={16} />
             {facility.capacity}
           </span>
-          <span className="flex items-center gap-1">
-            <DollarSign size={14} />
+          <span className="flex items-center gap-1.5">
+            <DollarSign size={16} />
             {facility.pricePerHour}/hr
           </span>
-          <span className="flex items-center gap-1">
-            <Clock size={14} />
-            1hr slots
+          <span className="flex items-center gap-1.5">
+            <Clock size={16} />
+            1hr
           </span>
         </div>
       </div>
