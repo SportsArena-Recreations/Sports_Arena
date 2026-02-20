@@ -61,8 +61,13 @@ const Index = () => {
             <span className="mb-4 inline-block rounded-full bg-accent/20 px-4 py-1.5 text-sm font-semibold text-accent">
               {arenaConfig.tagline}
             </span>
-            <h1 className="font-display text-5xl sm:text-6xl md:text-8xl font-extrabold tracking-tighter text-white">
-              {arenaConfig.name}
+            <h1 className="font-display text-5xl sm:text-6xl md:text-8xl lg:text-[7.5rem] font-bold tracking-tighter mb-4 md:mb-6 leading-[1.15] md:leading-[1.0] flex items-center justify-center font-display text-white">
+              <TypewriterText
+                texts={["Elevate your game.", "Dominate the pitch.", "Train like a pro.", "Master your craft."]}
+                className="text-white block bg-clip-text"
+                cursorClassName="bg-white w-[4px] md:w-[7px] h-[0.9em] md:h-[0.85em] align-middle inline-block rounded-full ml-1 md:ml-2"
+                cursorChar=""
+              />
             </h1>
             <p className="mt-6 text-lg md:text-xl text-white/80 max-w-2xl text-center leading-relaxed">
               Book world-class facilities, join tournaments, and elevate your game at the premier sports destination.
