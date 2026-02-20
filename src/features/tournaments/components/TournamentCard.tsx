@@ -11,43 +11,41 @@ export function TournamentCard({ tournament }: TournamentCardProps) {
   return (
     <Link
       to={`/tournaments/${tournament.id}`}
-      className="group block rounded-xl border border-border bg-card card-shadow transition-all duration-300 hover:card-shadow-hover hover:-translate-y-1"
+      className="group block"
     >
-      <div className="relative h-40 overflow-hidden rounded-t-xl hero-gradient">
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-primary-foreground">
-          <Trophy size={32} className="mb-2 opacity-80" />
-          <span className="text-xs font-medium uppercase tracking-widest opacity-70">
-            {tournament.sport}
-          </span>
-        </div>
-        <div className="absolute right-3 top-3">
+      <div className="relative h-64 w-full overflow-hidden rounded-2xl bg-[#111] border border-white/5 mb-6 flex flex-col items-center justify-center">
+        <Trophy size={48} className="mb-4 text-white/50 group-hover:text-white transition-colors duration-300" />
+        <span className="text-sm font-semibold uppercase tracking-widest text-white/40 group-hover:text-white/80 transition-colors duration-300">
+          {tournament.sport}
+        </span>
+        <div className="absolute right-4 top-4">
           <StatusBadge status={tournament.status} />
         </div>
       </div>
 
-      <div className="p-5">
-        <h3 className="font-display text-lg font-bold group-hover:text-primary transition-colors">
+      <div>
+        <h3 className="text-2xl font-semibold tracking-tight text-white mb-2 group-hover:text-white/80 transition-colors">
           {tournament.name}
         </h3>
-        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+        <p className="text-white/50 leading-relaxed mb-6 line-clamp-2">
           {tournament.description}
         </p>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <Calendar size={14} />
+        <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-sm font-medium text-white/40">
+          <span className="flex items-center gap-2">
+            <Calendar size={16} />
             {new Date(tournament.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </span>
-          <span className="flex items-center gap-1.5">
-            <Users size={14} />
+          <span className="flex items-center gap-2">
+            <Users size={16} />
             {tournament.registeredTeams}/{tournament.maxTeams} teams
           </span>
-          <span className="flex items-center gap-1.5">
-            <DollarSign size={14} />
+          <span className="flex items-center gap-2">
+            <DollarSign size={16} />
             ${tournament.entryFee} entry
           </span>
-          <span className="flex items-center gap-1.5">
-            <Trophy size={14} />
+          <span className="flex items-center gap-2">
+            <Trophy size={16} />
             ${tournament.prizePool.toLocaleString()} prize
           </span>
         </div>
