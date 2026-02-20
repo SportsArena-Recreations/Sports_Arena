@@ -96,7 +96,7 @@ Follow these steps to run the app locally:
 
 ```sh
 # Step 1: Clone the repository
-git clone [<YOUR_GIT_URL>](https://github.com/SportsArena-Recreations/Sports_Arena.git)
+git clone https://github.com/SportsArena-Recreations/Sports_Arena.git
 
 # Step 2: Navigate to the project directory
 cd Sport_Arena
