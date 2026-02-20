@@ -96,10 +96,10 @@ Follow these steps to run the app locally:
 
 ```sh
 # Step 1: Clone the repository
-git clone <YOUR_GIT_URL>
+git clone [<YOUR_GIT_URL>](https://github.com/SportsArena-Recreations/Sports_Arena.git)
 
 # Step 2: Navigate to the project directory
-cd <YOUR_PROJECT_NAME>
+cd Sport_Arena
 
 # Step 3: Install the necessary dependencies
 npm install
@@ -112,7 +112,7 @@ npm run dev
 
 ## 🌍 Deployment
 
-You can seamlessly publish your project anywhere standard React/Vite outputs are supported (Vercel, Netlify, AWS, etc.). For quick deployment using your starter service (e.g. Lovable / Vercel):
+You can seamlessly publish the project anywhere standard React/Vite outputs are supported (Vercel, Netlify, AWS, etc.). For quick deployment using your starter service (e.g. Lovable / Vercel):
 1. Connect to your Git Repository
 2. Allow CI/CD to build by utilizing the `npm run build` command.
 3. Your deployment setup will automatically serve the `./dist` folder securely!
