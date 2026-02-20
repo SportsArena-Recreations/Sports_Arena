@@ -6,27 +6,77 @@ export const RollingBall = React.forwardRef<HTMLDivElement, HTMLMotionProps<"div
   return (
     <StyledWrapper {...props} ref={ref}>
       <motion.div
-        className="ball-visuals"
-        initial={{ rotate: 0 }}
-        whileInView={{ rotate: [0, 0, 720, 720, 1440, 1440, 720, 0] }}
+        className="ball-bounce"
+        initial={{ y: 0 }}
+        whileInView={{ y: [0, 0, 0, 0, 0, 0, -150, 0] }}
         viewport={{ margin: "-50px" }}
         transition={{
           duration: 6,
           times: [0, 0.15, 0.35, 0.5, 0.7, 0.85, 0.925, 1],
-          ease: "easeInOut",
+          ease: ["linear", "linear", "linear", "linear", "linear", "easeOut", "easeIn"],
           repeat: Infinity,
         }}
       >
-        <div className="bg-texture">
-          {/* Dynamic grid to emphasize rotation speed */}
-          <div className="w-full h-[2px] bg-black/50 absolute top-1/2 left-0 -translate-y-1/2 rotate-45" />
-          <div className="w-[2px] h-full bg-black/50 absolute top-0 left-1/2 -translate-x-1/2 rotate-45" />
-          <div className="w-full h-[2px] bg-black/30 absolute top-1/2 left-0 -translate-y-1/2 -rotate-45" />
-          <div className="w-[2px] h-full bg-black/30 absolute top-0 left-1/2 -translate-x-1/2 -rotate-45" />
-        </div>
-        <div className="loader-number" />
+        <motion.div
+          className="ball-visuals"
+          initial={{ rotate: 0 }}
+          whileInView={{ rotate: [0, 0, 720, 720, 1440, 1440, 720, 0] }}
+          viewport={{ margin: "-50px" }}
+          transition={{
+            duration: 6,
+            times: [0, 0.15, 0.35, 0.5, 0.7, 0.85, 0.925, 1],
+            ease: ["linear", "easeInOut", "linear", "easeInOut", "linear", "linear", "linear"],
+            repeat: Infinity,
+          }}
+        >
+          <div className="bg-texture">
+            <div className="w-full h-[2px] bg-black/50 absolute top-1/2 left-0 -translate-y-1/2 rotate-45" />
+            <div className="w-[2px] h-full bg-black/50 absolute top-0 left-1/2 -translate-x-1/2 rotate-45" />
+            <div className="w-full h-[2px] bg-black/30 absolute top-1/2 left-0 -translate-y-1/2 -rotate-45" />
+            <div className="w-[2px] h-full bg-black/30 absolute top-0 left-1/2 -translate-x-1/2 -rotate-45" />
+          </div>
+
+          <div className="loader-number">
+            <div className="number-circle">
+              <motion.span
+                initial={{ opacity: 1 }}
+                whileInView={{ opacity: [1, 1, 0, 0, 0, 0, 1, 1] }}
+                viewport={{ margin: "-50px" }}
+                transition={{ duration: 6, times: [0, 0.24, 0.26, 0.59, 0.61, 0.92, 0.94, 1], ease: "linear", repeat: Infinity }}
+                className="absolute inset-0 flex items-center justify-center font-black"
+              >01</motion.span>
+              <motion.span
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: [0, 0, 1, 1, 0, 0, 0, 0] }}
+                viewport={{ margin: "-50px" }}
+                transition={{ duration: 6, times: [0, 0.24, 0.26, 0.59, 0.61, 0.92, 0.94, 1], ease: "linear", repeat: Infinity }}
+                className="absolute inset-0 flex items-center justify-center font-black"
+              >02</motion.span>
+              <motion.span
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: [0, 0, 0, 0, 1, 1, 0, 0] }}
+                viewport={{ margin: "-50px" }}
+                transition={{ duration: 6, times: [0, 0.24, 0.26, 0.59, 0.61, 0.92, 0.94, 1], ease: "linear", repeat: Infinity }}
+                className="absolute inset-0 flex items-center justify-center font-black"
+              >03</motion.span>
+            </div>
+          </div>
+        </motion.div>
       </motion.div>
-      <div className="ball-shadow" />
+
+      {/* Ground Shadow - Shrinks when ball jumps! */}
+      <motion.div
+        className="ball-shadow"
+        initial={{ scale: 1, opacity: 1 }}
+        whileInView={{ scale: [1, 1, 1, 1, 1, 1, 0.5, 1], opacity: [1, 1, 1, 1, 1, 1, 0.2, 1] }}
+        viewport={{ margin: "-50px" }}
+        transition={{
+          duration: 6,
+          times: [0, 0.15, 0.35, 0.5, 0.7, 0.85, 0.925, 1],
+          ease: ["linear", "linear", "linear", "linear", "linear", "easeOut", "easeIn"],
+          repeat: Infinity,
+        }}
+      />
     </StyledWrapper>
   );
 });
@@ -39,6 +89,12 @@ const StyledWrapper = styled(motion.div)`
   z-index: 30;
   width: 96px;
   height: 96px;
+
+  .ball-bounce {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+  }
 
   /* Stationary layer for consistent lighting and ground shadow */
   .ball-shadow {
@@ -76,30 +132,18 @@ const StyledWrapper = styled(motion.div)`
     display: flex;
     justify-content: center;
     align-items: center;
+    z-index: 4;
   }
 
-  .loader-number::before {
-    content: "01";
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  .number-circle {
+    position: relative;
     background: white;
     color: #000;
-    font-weight: 900;
     font-size: 28px;
     font-family: ui-sans-serif, system-ui, sans-serif;
     width: 52px;
     height: 52px;
     border-radius: 50%;
     box-shadow: inset 0 0 5px rgba(0,0,0,0.5), 0 0 15px rgba(255,255,255,0.1);
-    animation: numberChange 6s infinite ease-in-out;
-  }
-
-  /* Sync numbers swapping exactly across the 6-second motion cycle */
-  @keyframes numberChange {
-    0%, 20% { content: "01"; }
-    28%, 62% { content: "02"; }
-    68%, 85% { content: "03"; }
-    92%, 100% { content: "01"; }
   }
 `;

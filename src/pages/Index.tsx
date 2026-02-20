@@ -16,6 +16,9 @@ import { GlitchButton } from "@/components/ui/glitch-button";
 import { RollingBall } from "@/components/ui/rolling-ball";
 import heroImage from "@/assets/african_sports_hero.png";
 import tournamentsBg from "@/assets/african_soccer_sunny.png";
+import proTournamentsBg from "@/assets/pro_tournaments_bg.png";
+import certifiedRefereesBg from "@/assets/certified_referees_bg.png";
+import { Footer } from "@/components/layout/Footer";
 
 const features = [
   { icon: Trophy, title: "Pro-Level Tournaments", desc: "Compete in properly organized leagues and knockout tournaments featuring top regional talents." },
@@ -229,14 +232,26 @@ const Index = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.6, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="lg:col-span-2 lg:row-span-2 rounded-[2rem] bg-gradient-to-br from-white/[0.08] to-transparent border border-white/10 p-10 md:p-12 relative overflow-hidden group flex flex-col justify-end"
+              className="lg:col-span-2 lg:row-span-2 rounded-[2rem] border border-white/10 p-10 md:p-12 relative overflow-hidden group flex flex-col justify-end min-h-[400px]"
             >
-              <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-white/[0.02] blur-[80px] rounded-full translate-x-1/2 -translate-y-1/2" />
-              <div className="absolute top-10 right-10 opacity-20 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-700">
+              {/* Background Image Layer */}
+              <div className="absolute inset-0 z-0">
+                <img
+                  src={proTournamentsBg}
+                  alt="Pro Tournaments"
+                  className="w-full h-full object-cover opacity-40 grayscale mix-blend-luminosity group-hover:scale-105 group-hover:opacity-50 transition-all duration-700 ease-out"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
+              </div>
+
+              {/* Decorative Blur */}
+              <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-white/[0.02] blur-[80px] rounded-full translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none" />
+
+              <div className="absolute top-10 right-10 opacity-20 group-hover:opacity-40 group-hover:scale-110 group-hover:rotate-12 transition-all duration-700 z-10">
                 <Trophy size={120} strokeWidth={1} />
               </div>
-              <h3 className="text-4xl md:text-5xl font-bold tracking-tighter mb-4 text-white relative z-10">{features[0].title}</h3>
-              <p className="text-white/60 text-lg md:text-xl relative z-10 max-w-sm">{features[0].desc}</p>
+              <h3 className="text-4xl md:text-5xl font-bold tracking-tighter mb-4 text-white relative z-20 group-hover:text-white/90 transition-colors">{features[0].title}</h3>
+              <p className="text-white/60 text-lg md:text-xl relative z-20 max-w-sm">{features[0].desc}</p>
             </motion.div>
 
             {/* 2. Pro-Grade Gear (Wide 2x1) */}
@@ -263,12 +278,22 @@ const Index = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.6, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-              className="lg:col-span-1 lg:row-span-1 rounded-[2rem] bg-black border border-white/10 p-8 relative overflow-hidden group flex flex-col justify-between hover:bg-white/[0.02] hover:border-white/20 transition-colors"
+              className="lg:col-span-1 lg:row-span-1 rounded-[2rem] border border-white/10 p-8 relative overflow-hidden group flex flex-col justify-between"
             >
-              <ShieldCheck size={32} className="text-white/80 group-hover:text-white transition-colors" strokeWidth={1.5} />
-              <div>
+              {/* Background Image Layer */}
+              <div className="absolute inset-0 z-0">
+                <img
+                  src={certifiedRefereesBg}
+                  alt="Certified Referees"
+                  className="w-full h-full object-cover opacity-40 grayscale mix-blend-luminosity group-hover:scale-105 group-hover:opacity-60 transition-all duration-700 ease-out"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none" />
+              </div>
+
+              <ShieldCheck size={32} className="text-white/80 group-hover:text-white transition-colors relative z-10" strokeWidth={1.5} />
+              <div className="relative z-10">
                 <h3 className="text-xl font-bold tracking-tight mb-2 text-white">{features[2].title}</h3>
-                <p className="text-white/40 text-sm leading-relaxed">{features[2].desc}</p>
+                <p className="text-white/60 text-sm leading-relaxed">{features[2].desc}</p>
               </div>
             </motion.div>
 
@@ -350,18 +375,23 @@ const Index = () => {
             </motion.div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-            {facilities.map((f, i) => (
-              <motion.div
-                key={f.id}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-100px" }}
-                transition={{ duration: 0.6, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <FacilityCard facility={f} />
-              </motion.div>
-            ))}
+          <div className="relative w-full overflow-hidden flex flex-col justify-center py-10 -mx-6 px-6">
+            {/* Extended Dark Masking Edges for deep fade out */}
+            <div className="absolute left-0 top-0 bottom-0 w-32 md:w-80 bg-gradient-to-r from-black via-black/90 to-transparent z-10 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-32 md:w-80 bg-gradient-to-l from-black via-black/90 to-transparent z-10 pointer-events-none" />
+
+            {/* Auto-scrolling Infinite Marquee */}
+            <motion.div
+              className="flex gap-6 md:gap-8 w-max"
+              animate={{ x: ["0%", "-50%"] }}
+              transition={{ duration: 40, ease: "linear", repeat: Infinity }}
+            >
+              {[...facilities, ...facilities, ...facilities, ...facilities, ...facilities].map((f, i) => (
+                <div key={`${f.id}-${i}`} className="w-[320px] md:w-[450px] flex-shrink-0 group/card">
+                  <FacilityCard facility={f} />
+                </div>
+              ))}
+            </motion.div>
           </div>
         </div>
       </section >
@@ -399,16 +429,13 @@ const Index = () => {
             <div className="hidden md:block absolute top-[48px] left-[16.66%] right-[16.66%] h-[2px] bg-gradient-to-r from-transparent via-white/10 to-transparent">
               {/* Rolling 8-Ball */}
               <RollingBall
-                initial={{ left: "0%", y: 0 }}
-                whileInView={{
-                  left: ["0%", "0%", "50%", "50%", "100%", "100%", "50%", "0%"],
-                  y: [0, 0, 0, 0, 0, 0, -150, 0]
-                }}
+                initial={{ left: "0%" }}
+                whileInView={{ left: ["0%", "0%", "50%", "50%", "100%", "100%", "50%", "0%"] }}
                 viewport={{ margin: "-50px" }}
                 transition={{
                   duration: 6,
                   times: [0, 0.15, 0.35, 0.5, 0.7, 0.85, 0.925, 1],
-                  ease: ["easeInOut", "easeInOut", "easeInOut", "easeInOut", "easeInOut", "easeOut", "easeIn"],
+                  ease: ["linear", "easeInOut", "linear", "easeInOut", "linear", "linear", "linear"],
                   repeat: Infinity,
                 }}
               />
@@ -452,30 +479,41 @@ const Index = () => {
         </div>
       </section>
 
-      {/* CTA */}
-      < section className="hero-gradient py-20" >
-        <div className="container text-center">
-          <h2 className="font-display text-3xl font-bold text-primary-foreground md:text-4xl">
-            Ready to Play?
-          </h2>
-          <p className="mx-auto mt-3 max-w-md text-primary-foreground/80">
-            Book your facility today or register your team for the next tournament.
-          </p>
-          <div className="mt-8 flex justify-center items-center gap-4">
-            <Link to="/facilities">
-              <Button size="lg" variant="secondary" className="font-semibold px-8 py-6 rounded-full text-lg shadow-xl shadow-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 bg-black text-white hover:text-white transition-all">
-                Book Now
-              </Button>
-            </Link>
-            <Link to="/tournaments" className="-mt-1">
-              <GlitchButton>
-                Join a Tournament
-              </GlitchButton>
-            </Link>
+      {/* Fade-in wrapper for CTA and Footer */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full"
+      >
+        {/* CTA */}
+        <section className="bg-gradient-to-b from-black to-card py-24 md:py-32 relative overflow-hidden">
+          <div className="container text-center relative z-10">
+            <h2 className="font-display text-3xl font-bold text-primary-foreground md:text-4xl tracking-tighter">
+              Ready to Play?
+            </h2>
+            <p className="mx-auto mt-3 max-w-md text-primary-foreground/60 text-lg">
+              Book your facility today or register your team for the next tournament.
+            </p>
+            <div className="mt-10 flex justify-center items-center gap-4">
+              <Link to="/facilities">
+                <Button size="lg" variant="secondary" className="font-semibold px-8 py-6 rounded-full text-lg shadow-xl shadow-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 bg-black text-white hover:text-white transition-all">
+                  Book Now
+                </Button>
+              </Link>
+              <Link to="/tournaments" className="-mt-1">
+                <GlitchButton>
+                  Join a Tournament
+                </GlitchButton>
+              </Link>
+            </div>
           </div>
-        </div>
-      </section >
-    </div >
+        </section>
+
+        <Footer />
+      </motion.div>
+    </div>
   );
 };
 
