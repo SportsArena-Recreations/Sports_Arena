@@ -6,6 +6,8 @@ import { tournamentService } from "@/features/tournaments/services/tournament.se
 import { Facility } from "@/features/facilities/types";
 import { Tournament } from "@/features/tournaments/types";
 import { ArrowRight, MoveRight, Trophy, Users, Smartphone, Video, ShieldCheck, Coffee } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { arenaConfig } from "@/config/arena.config";
 
 import { FacilityCard } from "@/features/facilities/components/FacilityCard";
 import { TournamentCard } from "@/features/tournaments/components/TournamentCard";
@@ -50,33 +52,55 @@ const Index = () => {
           >
             The Premier Sports Destination
           </motion.div>
-          <motion.h1
+          <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="text-5xl sm:text-6xl md:text-8xl lg:text-[7.5rem] font-bold tracking-tighter mb-6 md:mb-8 leading-[1.1] md:leading-[1.0] flex items-center justify-center font-display"
+            className="flex flex-col items-center justify-center"
           >
             <span className="mb-4 inline-block rounded-full bg-accent/20 px-4 py-1.5 text-sm font-semibold text-accent">
               {arenaConfig.tagline}
             </span>
-            <h1 className="font-display text-4xl font-extrabold tracking-tight text-background md:text-6xl">
+            <h1 className="font-display text-5xl sm:text-6xl md:text-8xl font-extrabold tracking-tighter text-white">
               {arenaConfig.name}
             </h1>
-            <p className="mt-4 text-lg text-background/80 max-w-lg">
+            <p className="mt-6 text-lg md:text-xl text-white/80 max-w-2xl text-center leading-relaxed">
               Book world-class facilities, join tournaments, and elevate your game at the premier sports destination.
             </p>
-            <div className="mt-8 flex flex-wrap gap-4">
+            <div className="mt-10 flex flex-wrap gap-4 justify-center">
               <Link to="/facilities">
-                <Button size="lg" className="gap-2 font-semibold">
+                <Button size="lg" className="gap-2 font-semibold bg-white text-black hover:bg-white/90 rounded-full px-8 py-6 text-lg shadow-[0_0_40px_rgba(255,255,255,0.15)] hover:shadow-[0_0_60px_rgba(255,255,255,0.25)] transition-all">
                   Book a Facility
                   <ArrowRight size={18} />
                 </Button>
               </Link>
               <Link to="/tournaments">
-                <Button size="lg" variant="outline" className="gap-2 border-2 border-white bg-transparent text-white font-bold hover:bg-white/20 hover:text-white">
+                <Button size="lg" variant="outline" className="gap-2 border-white/20 bg-transparent text-white font-semibold hover:bg-white/10 rounded-full px-8 py-6 text-lg transition-colors backdrop-blur-md shadow-[0_0_40px_rgba(255,255,255,0.02)]">
                   View Tournaments
                 </Button>
               </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <motion.section
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.8 }}
+        className="py-16 md:py-20 bg-[#060606] border-b border-white/5"
+      >
+        <div className="container mx-auto px-6 max-w-5xl">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-y-12 md:gap-y-0 divide-x-0 md:divide-x divide-white/10 text-center">
+            <div className="flex flex-col items-center justify-center">
+              <div className="text-4xl md:text-5xl font-bold tracking-tighter mb-2 text-white">6+</div>
+              <div className="text-xs font-semibold text-white/40 tracking-widest uppercase">Premium Facilities</div>
+            </div>
+            <div className="flex flex-col items-center justify-center">
+              <div className="text-4xl md:text-5xl font-bold tracking-tighter mb-2 text-white">20+</div>
+              <div className="text-xs font-semibold text-white/40 tracking-widest uppercase">Tournaments / Year</div>
             </div>
             <div className="flex flex-col items-center justify-center">
               <div className="text-4xl md:text-5xl font-bold tracking-tighter mb-2 text-white">17<span className="text-2xl">h</span></div>
@@ -91,7 +115,7 @@ const Index = () => {
       </motion.section>
 
       {/* Features Section */}
-      <section className="py-20 md:py-32 px-6 bg-[#020202]">
+      < section className="py-20 md:py-32 px-6 bg-[#020202]" >
         <div className="container mx-auto max-w-6xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -134,10 +158,10 @@ const Index = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section >
 
       {/* Facilities Section */}
-      <section className="py-20 md:py-32 px-6 border-t border-white/5">
+      < section className="py-20 md:py-32 px-6 border-t border-white/5" >
         <div className="container mx-auto max-w-6xl">
           <div className="mb-16 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <motion.div
@@ -175,10 +199,10 @@ const Index = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section >
 
       {/* Tournaments Section */}
-      <section className="relative py-20 md:py-32 px-6 border-t border-white/5 overflow-hidden">
+      < section className="relative py-20 md:py-32 px-6 border-t border-white/5 overflow-hidden" >
         <div className="absolute inset-0 z-0">
           <img src={tournamentsBg} alt="Soccer Field" className="h-full w-full object-cover opacity-[0.15] grayscale mix-blend-luminosity" />
           <div className="absolute inset-0 bg-[#050505]/80 backdrop-blur-[2px]" />
@@ -220,10 +244,10 @@ const Index = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section >
 
       {/* CTA */}
-      <section className="hero-gradient py-20">
+      < section className="hero-gradient py-20" >
         <div className="container text-center">
           <h2 className="font-display text-3xl font-bold text-primary-foreground md:text-4xl">
             Ready to Play?
@@ -243,9 +267,9 @@ const Index = () => {
               </Button>
             </Link>
           </div>
-        </motion.div>
-      </section>
-    </div>
+        </div>
+      </section >
+    </div >
   );
 };
 
