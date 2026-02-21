@@ -19,6 +19,7 @@ import tournamentsBg from "@/assets/african_soccer_sunny.png";
 import proTournamentsBg from "@/assets/pro_tournaments_bg.png";
 import certifiedRefereesBg from "@/assets/certified_referees_bg.png";
 import { Footer } from "@/components/layout/Footer";
+import { HomeNav } from "@/components/layout/HomeNav";
 
 const features = [
   { icon: Trophy, title: "Pro-Level Tournaments", desc: "Compete in properly organized leagues and knockout tournaments featuring top regional talents." },
@@ -40,6 +41,7 @@ const Index = () => {
 
   return (
     <div className="bg-black text-white min-h-screen selection:bg-white/30 font-sans">
+      <HomeNav />
       {/* Hero Section */}
       <section className="relative pt-[120px] pb-10 px-6 overflow-hidden flex flex-col items-center min-h-[100dvh]">
         <div className="absolute inset-0 z-0 selection:bg-transparent">
