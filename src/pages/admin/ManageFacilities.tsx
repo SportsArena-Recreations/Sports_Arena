@@ -94,6 +94,42 @@ function FacilityModal({ editing, onClose, onSaved }: ModalProps) {
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
+  /** Compress + resize image using Canvas before upload.
+   *  Max 1920px wide/tall, WebP at 85% quality (falls back to JPEG).
+   *  Typical result: 3MB PNG → ~250KB WebP, visually identical. */
+  const compressImage = (file: File): Promise<{ blob: Blob; ext: string }> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const MAX = 1920;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          if (width >= height) { height = Math.round((height / width) * MAX); width = MAX; }
+          else { width = Math.round((width / height) * MAX); height = MAX; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Try WebP first (best compression), fall back to JPEG
+        const useWebP = canvas.toDataURL("image/webp").startsWith("data:image/webp");
+        const mimeType = useWebP ? "image/webp" : "image/jpeg";
+        const ext = useWebP ? "webp" : "jpg";
+
+        canvas.toBlob(
+          (blob) => blob ? resolve({ blob, ext }) : reject(new Error("Canvas compression failed")),
+          mimeType,
+          0.85   // 85% quality — visually lossless, ~60-80% smaller
+        );
+      };
+      img.onerror = () => reject(new Error("Could not load image"));
+      img.src = objectUrl;
+    });
+
   const handleImageUpload = async (file: File) => {
     if (!file.type.startsWith("image/")) { setUploadError("Only image files are supported."); return; }
     if (file.size > 5 * 1024 * 1024) { setUploadError("Image must be under 5MB."); return; }
@@ -107,19 +143,29 @@ function FacilityModal({ editing, onClose, onSaved }: ModalProps) {
 
     setUploadError(null);
     setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
+    // ── Step 1: Compress (Canvas → WebP/JPEG) ──────────────────────────
+    let blob: Blob;
+    let ext: string;
+    try {
+      ({ blob, ext } = await compressImage(file));
+    } catch {
+      // Compression failed — fall back to original file
+      blob = file;
+      ext = file.name.split(".").pop() ?? "jpg";
+    }
+
+    // ── Step 2: Upload compressed blob ─────────────────────────────────
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { error: upErr } = await supabase.storage
       .from("facility-images")
-      .upload(path, file, {
+      .upload(path, blob, {
         upsert: true,
-        contentType: file.type,
+        contentType: ext === "webp" ? "image/webp" : "image/jpeg",
       });
 
     if (upErr) {
       console.error("[Storage upload] full error →", upErr);
-      // Show the real Supabase message so we can diagnose
       setUploadError(`Upload failed: ${upErr.message}`);
       setUploading(false);
       return;
@@ -129,6 +175,7 @@ function FacilityModal({ editing, onClose, onSaved }: ModalProps) {
     set("imageUrl", data.publicUrl);
     setUploading(false);
   };
+
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
