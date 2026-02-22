@@ -7,8 +7,8 @@ import { Facility } from "@/features/facilities/types";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useAuth } from "@/context/AuthContext";
 import {
-  ChevronLeft, Users, Banknote, Clock, CheckCircle2,
-  Loader2, CalendarDays, AlertTriangle, ShieldOff,
+  ChevronLeft, ChevronRight, Users, Banknote, Clock, CheckCircle2,
+  Loader2, CalendarDays, AlertTriangle, ShieldOff, X,
 } from "lucide-react";
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -66,15 +66,53 @@ const FacilityDetail = () => {
   // Booking form
   const [form, setForm] = useState({ name: fullName ?? "", email: user?.email ?? "", phone: "", notes: "" });
   const [booking, setBooking] = useState(false);
-  const [booked, setBooked] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  // Next 7 days
-  const dates = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    return d.toISOString().split("T")[0];
+  // Calendar View State
+  const [currentMonth, setCurrentMonth] = useState(() => {
+    const d = new Date(selectedDate);
+    d.setDate(1);
+    return d;
   });
+
+  const getDaysInMonth = (year: number, month: number) => {
+    const date = new Date(year, month, 1);
+    const startDay = date.getDay();
+    const days = [];
+
+    // Add padded days from prev month
+    const prevMonthDays = new Date(year, month, 0).getDate();
+    for (let i = startDay - 1; i >= 0; i--) {
+      days.push({
+        date: new Date(year, month - 1, prevMonthDays - i),
+        isCurrentMonth: false
+      });
+    }
+
+    // Add current month days
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({
+        date: new Date(year, month, i),
+        isCurrentMonth: true
+      });
+    }
+
+    // Add padded days for next month
+    const remaining = 42 - days.length;
+    for (let i = 1; i <= remaining; i++) {
+      days.push({
+        date: new Date(year, month + 1, i),
+        isCurrentMonth: false
+      });
+    }
+
+    return days;
+  };
+
+  const calendarDays = getDaysInMonth(currentMonth.getFullYear(), currentMonth.getMonth());
+  const [monthBookedDates, setMonthBookedDates] = useState<string[]>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -88,6 +126,12 @@ const FacilityDetail = () => {
       bookingService.getMineForFacility(id).then((res) => setMyBookings(res.data));
     }
   }, [id, session]);
+
+  useEffect(() => {
+    if (!id) return;
+    bookingService.getBookedDaysInMonth(id, currentMonth.getFullYear(), currentMonth.getMonth())
+      .then((res) => setMonthBookedDates(res.data));
+  }, [id, currentMonth]);
 
   useEffect(() => {
     if (!id) return;
@@ -129,10 +173,30 @@ const FacilityDetail = () => {
 
     setBooking(false);
     if (!res.success) { setBookError(res.message ?? "Booking failed. Please try again."); return; }
-    setBooked(true);
-    // Refresh both booked slots and user's bookings
+    // Refresh both booked slots and user's bookings, plus month indicator
     bookingService.getBookedSlots(facility.id, selectedDate).then((r) => setBookedSlots(r.data));
     bookingService.getMineForFacility(facility.id).then((r) => setMyBookings(r.data));
+    bookingService.getBookedDaysInMonth(facility.id, currentMonth.getFullYear(), currentMonth.getMonth())
+      .then((res) => setMonthBookedDates(res.data));
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!confirm("Are you sure you want to cancel this booking?")) return;
+
+    setCancellingId(bookingId);
+    const res = await bookingService.cancel(bookingId);
+    setCancellingId(null);
+
+    if (res.success) {
+      if (!facility) return;
+      // Refresh state so calendar dots, slots, and myBookings immediately update
+      bookingService.getBookedSlots(facility.id, selectedDate).then((r) => setBookedSlots(r.data));
+      bookingService.getMineForFacility(facility.id).then((r) => setMyBookings(r.data));
+      bookingService.getBookedDaysInMonth(facility.id, currentMonth.getFullYear(), currentMonth.getMonth())
+        .then((res) => setMonthBookedDates(res.data));
+    } else {
+      alert("Failed to cancel booking: " + res.message);
+    }
   };
 
   if (loadingFacility) {
@@ -158,6 +222,8 @@ const FacilityDetail = () => {
   const slots = generateSlots(facility.pricePerHour);
   const isSlotBooked = (start: string) =>
     bookedSlots.some((b) => b.startTime.slice(0, 5) === start);
+  const isSlotMyBooking = (start: string) =>
+    myBookings.some((b) => b.date === selectedDate && b.startTime.slice(0, 5) === start);
 
   return (
     <div className="min-h-screen bg-[#080809]">
@@ -271,24 +337,91 @@ const FacilityDetail = () => {
               </div>
             )}
 
-            {/* Date picker */}
-            <div className="mb-6">
-              <p className="text-[10px] font-bold tracking-widest uppercase text-white/20 mb-3 flex items-center gap-2">
-                <CalendarDays size={11} /> Select Date
-              </p>
-              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-                {dates.map((d) => (
+            {/* ── Calendar ── */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[10px] font-bold tracking-widest uppercase text-white/20 flex items-center gap-2">
+                  <CalendarDays size={11} /> Select Date
+                </p>
+                <div className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.06] rounded-xl p-1">
                   <button
-                    key={d}
-                    onClick={() => setSelectedDate(d)}
-                    className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all ${selectedDate === d
-                      ? "bg-white text-black border-white"
-                      : "bg-white/[0.04] border-white/[0.08] text-white/50 hover:text-white hover:border-white/20"
-                      }`}
+                    onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
+                    className="p-1.5 hover:bg-white/[0.06] rounded-lg text-white/40 hover:text-white transition-all disabled:opacity-30"
+                    disabled={currentMonth <= new Date(new Date().getFullYear(), new Date().getMonth(), 1)} // Prevent going into past months
                   >
-                    {fmtDate(d)}
+                    <ChevronLeft size={14} />
                   </button>
-                ))}
+                  <span className="text-xs font-bold text-white min-w-[100px] text-center">
+                    {currentMonth.toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                  </span>
+                  <button
+                    onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
+                    className="p-1.5 hover:bg-white/[0.06] rounded-lg text-white/40 hover:text-white transition-all"
+                  >
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/[0.06] bg-white/[0.01] p-3 md:p-4">
+                {/* Week days */}
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                  {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => (
+                    <div key={day} className="text-center text-[10px] uppercase font-bold text-white/20 py-1">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Calendar grid */}
+                <div className="grid grid-cols-7 gap-1">
+                  {calendarDays.map((d, i) => {
+                    // Fix timezone offset to get local YYYY-MM-DD reliably
+                    const isoDate = new Date(d.date.getTime() - d.date.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+                    const isSelected = selectedDate === isoDate;
+
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const isPast = d.date < today;
+                    const isBooked = monthBookedDates.includes(isoDate);
+                    const isMyBookingDate = myBookings.some((b) => b.date === isoDate);
+
+                    return (
+                      <button
+                        key={i}
+                        disabled={isPast && !isSelected}
+                        onClick={() => {
+                          setSelectedDate(isoDate);
+                          if (!d.isCurrentMonth) {
+                            setCurrentMonth(new Date(d.date.getFullYear(), d.date.getMonth(), 1));
+                          }
+                        }}
+                        className={`
+                          relative flex flex-col items-center justify-center py-2 md:py-2.5 rounded-lg text-xs md:text-sm transition-all
+                          ${isSelected
+                            ? "bg-white text-black font-bold shadow-[0_4px_16px_rgba(255,255,255,0.15)]"
+                            : isPast
+                              ? "text-white/10 cursor-not-allowed"
+                              : d.isCurrentMonth
+                                ? "text-white/60 hover:bg-white/[0.06] hover:border-white/20 hover:text-white border border-transparent"
+                                : "text-white/15 hover:bg-white/[0.04] hover:text-white/40 border border-transparent"
+                          }
+                        `}
+                      >
+                        <span className="relative z-10">{d.date.getDate()}</span>
+                        {/* Booked indicator dot */}
+                        {(isBooked || isMyBookingDate) && !isPast && (
+                          <span className={`absolute bottom-0.5 md:bottom-1 h-1 w-1 rounded-full ${isSelected
+                            ? "bg-black"
+                            : isMyBookingDate
+                              ? "bg-green-400"
+                              : "bg-white/40"
+                            }`} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -300,7 +433,9 @@ const FacilityDetail = () => {
               <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
                 {slots.map((slot) => {
                   const isBooked = isSlotBooked(slot.start);
+                  const isMine = isSlotMyBooking(slot.start);
                   const isSelected = selectedSlot === slot.start;
+
                   return (
                     <button
                       key={slot.id}
@@ -309,13 +444,15 @@ const FacilityDetail = () => {
                       className={`flex flex-col items-center py-2.5 px-1 rounded-xl border text-center transition-all ${isSelected
                         ? "bg-white border-white text-black"
                         : isBooked
-                          ? "bg-white/[0.02] border-white/[0.04] text-white/15 cursor-not-allowed line-through"
+                          ? isMine
+                            ? "bg-green-500/[0.08] border-green-500/20 text-green-400 cursor-not-allowed"
+                            : "bg-white/[0.02] border-white/[0.04] text-white/15 cursor-not-allowed line-through"
                           : "bg-white/[0.04] border-white/[0.08] text-white/60 hover:border-white/25 hover:text-white cursor-pointer"
                         }`}
                     >
                       <span className="text-xs font-bold">{slot.start}</span>
                       <span className="text-[10px] opacity-60 mt-0.5">
-                        {isBooked ? "Taken" : fmt(slot.price)}
+                        {isBooked ? (isMine ? "Yours" : "Taken") : fmt(slot.price)}
                       </span>
                     </button>
                   );
@@ -329,7 +466,7 @@ const FacilityDetail = () => {
             <AnimatePresence mode="wait">
 
               {/* ── Has bookings → show details card ── */}
-              {session && myBookings.length > 0 && !booked ? (
+              {session && myBookings.length > 0 ? (
                 <motion.div
                   key="my-bookings"
                   initial={{ opacity: 0, y: 12 }}
@@ -359,12 +496,25 @@ const FacilityDetail = () => {
                         {/* Date + Status row */}
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-bold text-white">{fmtDate(b.date)}</p>
-                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full border capitalize ${b.status === "confirmed"
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full border capitalize ${b.status === "confirmed"
                               ? "bg-green-500/10 text-green-400 border-green-500/20"
                               : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                            }`}>
-                            {b.status}
-                          </span>
+                              }`}>
+                              {b.status}
+                            </span>
+                            <button
+                              onClick={() => handleCancelBooking(b.id)}
+                              disabled={cancellingId === b.id}
+                              className={`p-1.5 rounded-full border transition-all ${cancellingId === b.id
+                                ? "bg-white/5 border-white/10 text-white/20 cursor-wait"
+                                : "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white"
+                                }`}
+                              title="Cancel Booking"
+                            >
+                              {cancellingId === b.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
+                            </button>
+                          </div>
                         </div>
 
                         {/* Details grid */}
@@ -407,34 +557,6 @@ const FacilityDetail = () => {
                     >
                       + Book another slot
                     </button>
-                  </div>
-                </motion.div>
-
-              ) : booked ? (
-                /* ── Just booked → quick success then redirect to details card ── */
-                <motion.div
-                  key="just-booked"
-                  initial={{ opacity: 0, scale: 0.97 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="rounded-2xl border border-green-500/20 bg-[#0d0d11] overflow-hidden"
-                  style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.5)" }}
-                >
-                  <div className="flex flex-col items-center gap-4 px-6 py-10 text-center">
-                    <motion.div
-                      initial={{ scale: 0.5, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: 0.1, type: "spring", stiffness: 300 }}
-                      className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/10 border border-green-500/20"
-                    >
-                      <CheckCircle2 size={28} className="text-green-400" />
-                    </motion.div>
-                    <div>
-                      <h3 className="text-base font-bold text-white">Booking Confirmed! 🎉</h3>
-                      <p className="text-xs text-white/40 mt-1 max-w-[200px] mx-auto leading-relaxed">
-                        You're all set. Your slot is locked in — see you there!
-                      </p>
-                    </div>
                   </div>
                 </motion.div>
 

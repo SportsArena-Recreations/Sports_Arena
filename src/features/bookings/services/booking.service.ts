@@ -39,9 +39,13 @@ export const bookingService = {
 
   /** User: get their own bookings */
   async getMine(): Promise<ServiceResponse<Booking[]>> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return createServiceResponse([], "User not logged in");
+
     const { data, error } = await supabase
       .from("bookings")
       .select("*, facilities(name)")
+      .eq("user_id", user.id) // Explicitly filter by user ID!
       .order("date", { ascending: false });
 
     if (error) return createServiceResponse([], error.message);
@@ -50,6 +54,27 @@ export const bookingService = {
       facility_name: (row.facilities as { name: string } | null)?.name ?? "",
     }));
     return createServiceResponse(mapped);
+  },
+
+  /** Get dates in a specific month that have at least one booking (for calendar indicators) */
+  async getBookedDaysInMonth(facilityId: string, year: number, month: number): Promise<ServiceResponse<string[]>> {
+    const start = new Date(year, month, 1).toISOString().split("T")[0];
+    const end = new Date(year, month + 1, 0).toISOString().split("T")[0];
+
+    const { data, error } = await supabase
+      .from("bookings")
+      .select("date")
+      .eq("facility_id", facilityId)
+      .in("status", ["confirmed", "pending"])
+      .gte("date", start)
+      .lte("date", end);
+
+    if (error) {
+      console.error("[BookingService] getBookedDaysInMonth error:", error);
+      return createServiceResponse([], error.message);
+    }
+    const uniqueDates = Array.from(new Set((data ?? []).map((r) => r.date)));
+    return createServiceResponse(uniqueDates);
   },
 
   /** Get all booked slots for a facility on a given date (for TimeSlotPicker) */
@@ -61,7 +86,10 @@ export const bookingService = {
       .eq("date", date)
       .in("status", ["pending", "confirmed"]);
 
-    if (error) return createServiceResponse([], error.message);
+    if (error) {
+      console.error("[BookingService] getBookedSlots error:", error);
+      return createServiceResponse([], error.message);
+    }
     return createServiceResponse(
       (data ?? []).map((r) => ({ startTime: r.start_time, endTime: r.end_time }))
     );
@@ -104,10 +132,14 @@ export const bookingService = {
 
   /** User: get their bookings for a specific facility (shown on detail page) */
   async getMineForFacility(facilityId: string): Promise<ServiceResponse<Booking[]>> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return createServiceResponse([], "User not logged in");
+
     const { data, error } = await supabase
       .from("bookings")
       .select("*, facilities(name)")
       .eq("facility_id", facilityId)
+      .eq("user_id", user.id) // Explicit filter!
       .in("status", ["confirmed", "pending"])
       .order("date", { ascending: true });
 
@@ -125,6 +157,23 @@ export const bookingService = {
       .from("bookings")
       .update({ status })
       .eq("id", id)
+      .select()
+      .single();
+
+    if (error) return createServiceResponse({} as Booking, error.message);
+    return createServiceResponse(mapRow(data));
+  },
+
+  /** User: cancel their own booking */
+  async cancel(id: string): Promise<ServiceResponse<Booking>> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return createServiceResponse({} as Booking, "User not logged in");
+
+    const { data, error } = await supabase
+      .from("bookings")
+      .update({ status: "cancelled" })
+      .eq("id", id)
+      .eq("user_id", user.id) // Ensure they only cancel their own!
       .select()
       .single();
 
