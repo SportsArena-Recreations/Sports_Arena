@@ -19,6 +19,7 @@ import ManageFacilities from "./pages/admin/ManageFacilities";
 import ManageBookings from "./pages/admin/ManageBookings";
 import ManageTournaments from "./pages/admin/ManageTournaments";
 import ManageTeams from "./pages/admin/ManageTeams";
+import ManageMatches from "./pages/admin/ManageMatches";
 import Matches from "./pages/Matches";
 import Community from "./pages/Community";
 import NotFound from "./pages/NotFound";
@@ -58,6 +59,7 @@ const App = () => (
               <Route path="bookings" element={<ManageBookings />} />
               <Route path="tournaments" element={<ManageTournaments />} />
               <Route path="teams" element={<ManageTeams />} />
+              <Route path="matches" element={<ManageMatches />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

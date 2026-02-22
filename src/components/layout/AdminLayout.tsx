@@ -2,7 +2,7 @@ import { Link, Outlet, useLocation, useNavigate, Navigate } from "react-router-d
 import { arenaConfig } from "@/config/arena.config";
 import {
   LayoutDashboard, Building2, CalendarDays,
-  Trophy, Users, ChevronLeft, Zap, LogOut, ShieldCheck,
+  Trophy, Users, ChevronLeft, Zap, LogOut, ShieldCheck, Swords
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -12,6 +12,7 @@ const adminLinks = [
   { label: "Bookings", path: "/admin/bookings", icon: CalendarDays },
   { label: "Tournaments", path: "/admin/tournaments", icon: Trophy },
   { label: "Teams", path: "/admin/teams", icon: Users },
+  { label: "Matches", path: "/admin/matches", icon: Swords },
 ];
 
 function getInitials(name: string | null, email: string | null | undefined) {
