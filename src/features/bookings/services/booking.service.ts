@@ -20,6 +20,6 @@ export const bookingService = {
       createdAt: new Date().toISOString(),
     };
     const data = await simulateDelay(newBooking);
-    return createServiceResponse(data, true, "Booking created successfully");
+    return createServiceResponse(data);
   },
 };
