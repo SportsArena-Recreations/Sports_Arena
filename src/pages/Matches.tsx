@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { X, Trophy, Users, Calendar, Clock, ChevronRight, Swords, CheckCircle2, Timer, Shield, Info } from "lucide-react";
 import { Footer } from "@/components/layout/Footer";
 import { tournamentService } from "@/features/tournaments/services/tournament.service";
 import { facilityService } from "@/features/facilities/services/facility.service";
@@ -48,6 +49,11 @@ interface TournamentMatches {
 // ─── Transformer ─────────────────────────────────────────────────────────────
 // Maps the backend DB matches to the UI format expected by the Matches page
 function mapMatchToUI(m: DBMatch): Match {
+    let uiStatus: MatchStatus = "fixture";
+    if (m.status === "completed") uiStatus = "result";
+    else if (m.status === "in_progress") uiStatus = "live";
+    else if (m.status === "scheduled") uiStatus = "fixture";
+
     return {
         id: m.id,
         home: { name: m.homeTeamName, shortName: m.homeTeamName.substring(0, 3).toUpperCase(), score: m.homeScore },
@@ -55,7 +61,7 @@ function mapMatchToUI(m: DBMatch): Match {
         date: m.date,
         time: m.time,
         venue: m.venue || "TBD",
-        status: m.status as MatchStatus,
+        status: uiStatus,
         round: m.round
     };
 }
@@ -352,6 +358,7 @@ function TournamentCard({ tournament, onClickViewAll }: { tournament: Tournament
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function Matches() {
     const [tournaments, setTournaments] = useState<TournamentMatches[]>([]);
+    const [selected, setSelected] = useState<TournamentMatches | null>(null);
     const [sports, setSports] = useState<Sport[]>([]);
     const [selectedSport, setSelectedSport] = useState<string>("all");
     const [filter, setFilter] = useState<string>("all");
@@ -478,10 +485,12 @@ export default function Matches() {
             </section>
 
             {/* Category Filter */}
-            <section className="pt-8 pb-4 px-4 sm:px-6 sticky top-[72px] z-30 bg-[#020202]/90 backdrop-blur-md border-b border-white/[0.05] space-y-4">
+            <section className="pt-8 pb-4 px-4 sm:px-6 sticky top-[72px] z-30 bg-[#020202]/90 backdrop-blur-md border-b border-white/[0.05]">
                 <div className="container mx-auto max-w-4xl">
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-white/30 mb-2">Filter by Tournament</p>
-                    <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide snap-x">
+                    <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide snap-x items-center">
+
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-white/30 whitespace-nowrap hidden sm:inline-block">Format</span>
+
                         {filterOptions.map(opt => (
                             <button
                                 key={opt.value}
@@ -494,12 +503,11 @@ export default function Matches() {
                                 {opt.label}
                             </button>
                         ))}
-                    </div>
-                </div>
 
-                <div className="container mx-auto max-w-4xl">
-                    <p className="text-[10px] uppercase font-bold tracking-widest text-white/30 mb-2">Filter by Sport</p>
-                    <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide snap-x">
+                        <div className="w-px h-6 bg-white/[0.1] mx-1 flex-shrink-0" />
+
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-white/30 whitespace-nowrap hidden sm:inline-block">Sport</span>
+
                         <button
                             onClick={() => setSelectedSport("all")}
                             className={`snap-start whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all ${selectedSport === "all"
@@ -521,6 +529,7 @@ export default function Matches() {
                                 {sport.name}
                             </button>
                         ))}
+
                     </div>
                 </div>
             </section>
