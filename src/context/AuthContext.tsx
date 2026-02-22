@@ -11,13 +11,20 @@ import { supabase } from "@/lib/supabase";
 
 export type UserRole = "user" | "admin" | null;
 
+interface ProfileData {
+    role: UserRole;
+    fullName: string | null;
+}
+
 interface AuthContextValue {
     session: Session | null;
     user: User | null;
     role: UserRole;
     isAdmin: boolean;
+    fullName: string | null;
     loading: boolean;
     signOut: () => Promise<void>;
+    refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -25,28 +32,33 @@ const AuthContext = createContext<AuthContextValue>({
     user: null,
     role: null,
     isAdmin: false,
+    fullName: null,
     loading: true,
     signOut: async () => { },
+    refreshProfile: async () => { },
 });
 
-/** Fetch role with a 5-second timeout so it never hangs the app */
-async function fetchRoleWithTimeout(userId: string): Promise<UserRole> {
-    const fetchPromise = (async (): Promise<UserRole> => {
+/** Fetch role + full_name with a 5-second timeout */
+async function fetchProfileData(userId: string): Promise<ProfileData> {
+    const fetchPromise = (async (): Promise<ProfileData> => {
         try {
             const { data, error } = await supabase
                 .from("profiles")
-                .select("role")
+                .select("role, full_name")
                 .eq("id", userId)
                 .single();
-            if (error || !data) return "user";
-            return data.role as UserRole;
+            if (error || !data) return { role: "user", fullName: null };
+            return {
+                role: (data.role as UserRole) ?? "user",
+                fullName: data.full_name ?? null,
+            };
         } catch {
-            return "user";
+            return { role: "user", fullName: null };
         }
     })();
 
-    const timeoutPromise = new Promise<UserRole>((resolve) =>
-        setTimeout(() => resolve("user"), 5000)
+    const timeoutPromise = new Promise<ProfileData>((resolve) =>
+        setTimeout(() => resolve({ role: "user", fullName: null }), 5000)
     );
 
     return Promise.race([fetchPromise, timeoutPromise]);
@@ -55,27 +67,38 @@ async function fetchRoleWithTimeout(userId: string): Promise<UserRole> {
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [session, setSession] = useState<Session | null>(null);
     const [role, setRole] = useState<UserRole>(null);
+    const [fullName, setFullName] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const applyProfile = useCallback((data: ProfileData) => {
+        setRole(data.role);
+        setFullName(data.fullName);
+    }, []);
+
+    const refreshProfile = useCallback(async () => {
+        const uid = (await supabase.auth.getUser()).data.user?.id;
+        if (!uid) return;
+        const data = await fetchProfileData(uid);
+        applyProfile(data);
+    }, [applyProfile]);
+
     useEffect(() => {
-        // onAuthStateChange is the single source of truth
         const { data: listener } = supabase.auth.onAuthStateChange(
-            (event, newSession) => {
-                // Update session + clear loading IMMEDIATELY — don't wait for role
+            (_, newSession) => {
                 setSession(newSession);
                 setLoading(false);
 
                 if (newSession?.user) {
-                    // Fetch role in the background — doesn't block auth flow
-                    fetchRoleWithTimeout(newSession.user.id).then(setRole);
+                    fetchProfileData(newSession.user.id).then(applyProfile);
                 } else {
                     setRole(null);
+                    setFullName(null);
                 }
             }
         );
 
         return () => listener.subscription.unsubscribe();
-    }, []);
+    }, [applyProfile]);
 
     const signOut = useCallback(async () => {
         try {
@@ -93,8 +116,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 user: session?.user ?? null,
                 role,
                 isAdmin: role === "admin",
+                fullName,
                 loading,
                 signOut,
+                refreshProfile,
             }}
         >
             {children}

@@ -18,11 +18,11 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Profile() {
-    const { user, isAdmin, loading: authLoading } = useAuth();
+    const { user, isAdmin, fullName: contextFullName, loading: authLoading, refreshProfile } = useAuth();
     const navigate = useNavigate();
 
-    // Profile state
-    const [fullName, setFullName] = useState("");
+    // Profile state — seeded from AuthContext so there's no blank flash
+    const [fullName, setFullName] = useState(contextFullName ?? "");
     const [editingName, setEditingName] = useState(false);
     const [savingName, setSavingName] = useState(false);
     const [nameSaved, setNameSaved] = useState(false);
@@ -42,18 +42,11 @@ export default function Profile() {
         if (!authLoading && !user) navigate("/login");
     }, [authLoading, user, navigate]);
 
-    // Fetch profile on mount
+    // Sync fullName from context when it loads (covers page refresh)
     useEffect(() => {
-        if (!user) return;
-        supabase
-            .from("profiles")
-            .select("full_name")
-            .eq("id", user.id)
-            .single()
-            .then(({ data }) => {
-                if (data?.full_name) setFullName(data.full_name);
-            });
-    }, [user]);
+        if (contextFullName && !editingName) setFullName(contextFullName);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [contextFullName]);
 
     const handleSaveName = async () => {
         if (!user || !fullName.trim()) return;
@@ -72,6 +65,8 @@ export default function Profile() {
         } else {
             setEditingName(false);
             setNameSaved(true);
+            // Refresh context so the header name updates immediately
+            refreshProfile();
             setTimeout(() => setNameSaved(false), 3000);
         }
     };

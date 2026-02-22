@@ -10,7 +10,6 @@ import {
     ArrowLeft,
     Loader2,
     User,
-    CheckCircle2,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { arenaConfig } from "@/config/arena.config";
@@ -23,7 +22,6 @@ export default function Signup() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState(false);
 
     // Password strength indicator
     const passwordStrength = (() => {
@@ -57,47 +55,11 @@ export default function Signup() {
         if (authError) {
             setError(authError.message);
         } else {
-            setSuccess(true);
+            // Skip email confirmation prompt — redirect straight to sign in
+            navigate("/login");
         }
     };
 
-    if (success) {
-        return (
-            <div className="min-h-screen bg-black flex flex-col items-center justify-center px-4">
-                <div className="pointer-events-none fixed inset-0 overflow-hidden">
-                    <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-white/[0.03] blur-3xl" />
-                </div>
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="relative z-10 w-full max-w-[400px] text-center"
-                >
-                    <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-10 backdrop-blur-sm shadow-[0_8px_40px_rgba(0,0,0,0.4)]">
-                        <div className="flex justify-center mb-5">
-                            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-green-500/10 border border-green-500/20">
-                                <CheckCircle2 size={28} className="text-green-400" />
-                            </div>
-                        </div>
-                        <h2 className="text-xl font-bold text-white mb-2 tracking-tight">
-                            Check your inbox
-                        </h2>
-                        <p className="text-sm text-white/40 leading-relaxed mb-6">
-                            We've sent a confirmation link to{" "}
-                            <span className="text-white/70 font-medium">{email}</span>.
-                            Click it to activate your account.
-                        </p>
-                        <Link
-                            to="/login"
-                            className="inline-flex items-center justify-center w-full bg-white text-black font-bold text-sm tracking-wide rounded-xl py-3 hover:bg-white/90 transition-all"
-                        >
-                            Go to sign in
-                        </Link>
-                    </div>
-                </motion.div>
-            </div>
-        );
-    }
 
     return (
         <div className="min-h-screen bg-black flex flex-col">
@@ -233,8 +195,8 @@ export default function Signup() {
                                                 <div
                                                     key={i}
                                                     className={`h-1 flex-1 rounded-full transition-all duration-300 ${i <= passwordStrength
-                                                            ? strengthColors[passwordStrength]
-                                                            : "bg-white/10"
+                                                        ? strengthColors[passwordStrength]
+                                                        : "bg-white/10"
                                                         }`}
                                                 />
                                             ))}
@@ -243,12 +205,12 @@ export default function Signup() {
                                             Strength:{" "}
                                             <span
                                                 className={`font-medium ${passwordStrength === 4
-                                                        ? "text-green-400"
-                                                        : passwordStrength === 3
-                                                            ? "text-yellow-400"
-                                                            : passwordStrength === 2
-                                                                ? "text-orange-400"
-                                                                : "text-red-400"
+                                                    ? "text-green-400"
+                                                    : passwordStrength === 3
+                                                        ? "text-yellow-400"
+                                                        : passwordStrength === 2
+                                                            ? "text-orange-400"
+                                                            : "text-red-400"
                                                     }`}
                                             >
                                                 {strengthLabels[passwordStrength]}
