@@ -18,8 +18,7 @@ export function simulateDelay<T>(data: T, ms = 300): Promise<T> {
 
 export function createServiceResponse<T>(
   data: T,
-  success = true,
-  message?: string
+  errorMessage?: string,
 ): ServiceResponse<T> {
-  return { data, success, message };
+  return { data, success: !errorMessage, message: errorMessage };
 }

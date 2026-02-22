@@ -6,7 +6,7 @@ import { TimeSlotPicker } from "@/features/facilities/components/TimeSlotPicker"
 import { BookingForm } from "@/features/facilities/components/BookingForm";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Users, DollarSign } from "lucide-react";
+import { ChevronLeft, Users, Banknote } from "lucide-react";
 
 const sportIcons: Record<string, string> = {
   basketball: "🏀", soccer: "⚽", tennis: "🎾", volleyball: "🏐",
@@ -61,7 +61,7 @@ const FacilityDetail = () => {
               </div>
               <div className="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1"><Users size={14} /> Capacity: {facility.capacity}</span>
-                <span className="flex items-center gap-1"><DollarSign size={14} /> ${facility.pricePerHour}/hr</span>
+                <span className="flex items-center gap-1"><Banknote size={14} /> ₦{facility.pricePerHour.toLocaleString("en-NG")}/hr</span>
               </div>
             </div>
           </div>
@@ -129,11 +129,11 @@ const FacilityDetail = () => {
               selectedSlot={
                 selectedSlotData
                   ? {
-                      date: selectedSlotData.date,
-                      startTime: selectedSlotData.startTime,
-                      endTime: selectedSlotData.endTime,
-                      price: selectedSlotData.price,
-                    }
+                    date: selectedSlotData.date,
+                    startTime: selectedSlotData.startTime,
+                    endTime: selectedSlotData.endTime,
+                    price: selectedSlotData.price,
+                  }
                   : undefined
               }
             />

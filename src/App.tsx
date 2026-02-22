@@ -13,6 +13,7 @@ import Tournaments from "./pages/Tournaments";
 import TournamentDetail from "./pages/TournamentDetail";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/admin/Dashboard";
 import ManageFacilities from "./pages/admin/ManageFacilities";
 import ManageBookings from "./pages/admin/ManageBookings";
@@ -36,6 +37,7 @@ const App = () => (
             {/* Auth pages (standalone — no navbar) */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/profile" element={<Profile />} />
 
             {/* Public routes with Navbar */}
             <Route element={<PublicLayout />}>

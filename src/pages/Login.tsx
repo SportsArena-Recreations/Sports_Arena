@@ -18,17 +18,34 @@ export default function Login() {
         setError(null);
         setLoading(true);
 
-        const { error: authError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
+        try {
+            const result = await Promise.race([
+                supabase.auth.signInWithPassword({ email, password }),
+                new Promise<never>((_, reject) =>
+                    setTimeout(
+                        () => reject(new Error("Request timed out. Check your connection and try again.")),
+                        10_000
+                    )
+                ),
+            ]);
 
-        setLoading(false);
+            const { error: authError } = result as Awaited<
+                ReturnType<typeof supabase.auth.signInWithPassword>
+            >;
 
-        if (authError) {
-            setError(authError.message);
-        } else {
-            navigate("/");
+            if (authError) {
+                setError(authError.message);
+            } else {
+                navigate("/");
+            }
+        } catch (err: unknown) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Something went wrong. Please try again."
+            );
+        } finally {
+            setLoading(false);
         }
     };
 
