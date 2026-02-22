@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Plus, Pencil, Trash2, X, Loader2, CheckCircle2,
   Search, ChevronDown, Building2, Users, Clock,
-  AlertTriangle, Tag,
+  AlertTriangle, Tag, ImagePlus, Link2, UploadCloud,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { facilityService } from "@/features/facilities/services/facility.service";
 import { Facility, FacilityType } from "@/features/facilities/types";
+import { supabase } from "@/lib/supabase";
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -83,10 +84,62 @@ function FacilityModal({ editing, onClose, onSaved }: ModalProps) {
     editing ? { ...editing } : { ...EMPTY_FORM }
   );
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadTab, setUploadTab] = useState<"upload" | "url">("upload");
+  const [dragOver, setDragOver] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
+
+  const handleImageUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) { setUploadError("Only image files are supported."); return; }
+    if (file.size > 5 * 1024 * 1024) { setUploadError("Image must be under 5MB."); return; }
+
+    // Confirm the Supabase client has a live session before uploading
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      setUploadError("Not authenticated — please sign out and sign in again.");
+      return;
+    }
+
+    setUploadError(null);
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+    const { error: upErr } = await supabase.storage
+      .from("facility-images")
+      .upload(path, file, {
+        upsert: true,
+        contentType: file.type,
+      });
+
+    if (upErr) {
+      console.error("[Storage upload] full error →", upErr);
+      // Show the real Supabase message so we can diagnose
+      setUploadError(`Upload failed: ${upErr.message}`);
+      setUploading(false);
+      return;
+    }
+
+    const { data } = supabase.storage.from("facility-images").getPublicUrl(path);
+    set("imageUrl", data.publicUrl);
+    setUploading(false);
+  };
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageUpload(file);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault(); setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleImageUpload(file);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -281,17 +334,92 @@ function FacilityModal({ editing, onClose, onSaved }: ModalProps) {
               </p>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-white/55">Cover Image URL</label>
-              <input
-                className={inputCls}
-                placeholder="https://images.unsplash.com/…"
-                value={form.imageUrl}
-                onChange={(e) => set("imageUrl", e.target.value)}
-              />
-              <p className="text-[11px] text-white/25">
-                Paste a direct HTTPS image link. Leave blank to show a placeholder icon.
-              </p>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-white/55">Cover Image</label>
+
+              {/* Tab toggle */}
+              <div className="flex gap-1 p-1 bg-white/[0.04] border border-white/[0.07] rounded-xl w-fit">
+                <button
+                  type="button"
+                  onClick={() => setUploadTab("upload")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${uploadTab === "upload" ? "bg-white/10 text-white" : "text-white/35 hover:text-white/60"
+                    }`}
+                >
+                  <UploadCloud size={12} /> Upload file
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUploadTab("url")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${uploadTab === "url" ? "bg-white/10 text-white" : "text-white/35 hover:text-white/60"
+                    }`}
+                >
+                  <Link2 size={12} /> Paste URL
+                </button>
+              </div>
+
+              {uploadTab === "upload" ? (
+                <>
+                  {/* Drop zone */}
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    onDrop={onDrop}
+                    onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                    onDragLeave={() => setDragOver(false)}
+                    className={`relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed transition-all cursor-pointer ${dragOver
+                      ? "border-white/30 bg-white/[0.06]"
+                      : "border-white/[0.1] bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]"
+                      } ${form.imageUrl ? "h-32" : "h-28"}`}
+                  >
+                    {uploading ? (
+                      <Loader2 size={22} className="animate-spin text-white/40" />
+                    ) : form.imageUrl ? (
+                      <>
+                        <img
+                          src={form.imageUrl}
+                          alt="Preview"
+                          className="h-full w-full object-cover rounded-[10px] opacity-60"
+                        />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/50 rounded-[10px] opacity-0 hover:opacity-100 transition-opacity">
+                          <ImagePlus size={18} className="text-white/70" />
+                          <span className="text-xs text-white/60">Click to replace</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] border border-white/[0.1]">
+                          <UploadCloud size={18} className="text-white/40" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs font-semibold text-white/50">Drop image here or <span className="text-white/70">click to browse</span></p>
+                          <p className="text-[11px] text-white/25 mt-0.5">PNG, JPG, WEBP — max 5MB</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
+                  {uploadError && (
+                    <p className="text-[11px] text-red-400 flex items-center gap-1">
+                      <AlertTriangle size={11} /> {uploadError}
+                    </p>
+                  )}
+                  <p className="text-[11px] text-white/25">
+                    Image is uploaded to Supabase Storage and linked automatically.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <input
+                    className={inputCls}
+                    placeholder="https://images.unsplash.com/…"
+                    value={form.imageUrl}
+                    onChange={(e) => set("imageUrl", e.target.value)}
+                  />
+                  {form.imageUrl && (
+                    <img src={form.imageUrl} alt="preview" className="h-20 w-full object-cover rounded-xl opacity-60" onError={() => setUploadError("URL didn't load — check the link.")} />
+                  )}
+                  <p className="text-[11px] text-white/25">Paste a direct HTTPS image link (Unsplash, Cloudinary, etc).</p>
+                </>
+              )}
             </div>
           </section>
 
