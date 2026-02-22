@@ -2,6 +2,18 @@ import { supabase } from "@/lib/supabase";
 import { Tournament } from "../types";
 import { ServiceResponse, createServiceResponse } from "@/services/base.service";
 
+export interface TeamRegistration {
+  id?: string;
+  tournamentId: string;
+  teamName: string;
+  captainName: string;
+  captainEmail: string;
+  captainPhone: string;
+  playerCount: number;
+  paymentStatus?: string;
+  createdAt?: string;
+}
+
 // Map Supabase snake_case → camelCase
 function mapRow(row: Record<string, unknown>): Tournament {
   return {
@@ -100,6 +112,100 @@ export const tournamentService = {
 
   async delete(id: string): Promise<ServiceResponse<null>> {
     const { error } = await supabase.from("tournaments").delete().eq("id", id);
+    if (error) return createServiceResponse(null, error.message);
+    return createServiceResponse(null);
+  },
+
+  async registerTeam(registration: TeamRegistration): Promise<ServiceResponse<TeamRegistration>> {
+    const { data, error } = await supabase
+      .from("tournament_registrations")
+      .insert({
+        tournament_id: registration.tournamentId,
+        team_name: registration.teamName,
+        captain_name: registration.captainName,
+        captain_email: registration.captainEmail,
+        captain_phone: registration.captainPhone,
+        player_count: registration.playerCount,
+        payment_status: registration.paymentStatus ?? "pending"
+      })
+      .select()
+      .single();
+
+    if (error) return createServiceResponse({} as TeamRegistration, error.message);
+
+    return createServiceResponse({
+      id: data.id,
+      tournamentId: data.tournament_id,
+      teamName: data.team_name,
+      captainName: data.captain_name,
+      captainEmail: data.captain_email,
+      captainPhone: data.captain_phone,
+      playerCount: data.player_count,
+      paymentStatus: data.payment_status,
+      createdAt: data.created_at
+    });
+  },
+
+  async getRegistrationById(id: string): Promise<ServiceResponse<TeamRegistration>> {
+    const { data, error } = await supabase
+      .from("tournament_registrations")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) return createServiceResponse({} as TeamRegistration, error.message);
+
+    return createServiceResponse({
+      id: data.id,
+      tournamentId: data.tournament_id,
+      teamName: data.team_name,
+      captainName: data.captain_name,
+      captainEmail: data.captain_email,
+      captainPhone: data.captain_phone,
+      playerCount: data.player_count,
+      paymentStatus: data.payment_status,
+      createdAt: data.created_at
+    });
+  },
+
+  async getAllRegistrations(): Promise<ServiceResponse<(TeamRegistration & { tournamentName?: string; sport?: string })[]>> {
+    const { data, error } = await supabase
+      .from("tournament_registrations")
+      .select(`
+        *,
+        tournaments ( name, sport )
+      `)
+      .order("created_at", { ascending: false });
+
+    if (error) return createServiceResponse([], error.message);
+
+    return createServiceResponse((data ?? []).map((row: any) => ({
+      id: row.id,
+      tournamentId: row.tournament_id,
+      teamName: row.team_name,
+      captainName: row.captain_name,
+      captainEmail: row.captain_email,
+      captainPhone: row.captain_phone,
+      playerCount: row.player_count,
+      paymentStatus: row.payment_status,
+      createdAt: row.created_at,
+      tournamentName: row.tournaments?.name,
+      sport: row.tournaments?.sport,
+    })));
+  },
+
+  async updateRegistrationStatus(id: string, paymentStatus: string): Promise<ServiceResponse<null>> {
+    const { error } = await supabase
+      .from("tournament_registrations")
+      .update({ payment_status: paymentStatus })
+      .eq("id", id);
+
+    if (error) return createServiceResponse(null, error.message);
+    return createServiceResponse(null);
+  },
+
+  async cancelRegistration(id: string): Promise<ServiceResponse<null>> {
+    const { error } = await supabase.from("tournament_registrations").delete().eq("id", id);
     if (error) return createServiceResponse(null, error.message);
     return createServiceResponse(null);
   },

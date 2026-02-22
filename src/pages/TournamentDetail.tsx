@@ -104,16 +104,16 @@ const TournamentDetail = () => {
 
         {/* Registration Sidebar */}
         <div className="lg:col-span-1">
-          <div className="sticky top-24 rounded-xl border border-border bg-card p-6 card-shadow">
-            <h3 className="font-display text-xl font-bold mb-4">Team Registration</h3>
+          <div className="sticky top-24 rounded-2xl border border-white/5 bg-[#0a0a0d] p-6 shadow-2xl">
+            <h3 className="font-display text-xl font-bold mb-6 text-white tracking-tight">Team Registration</h3>
             {canRegister ? (
               <TeamRegistrationForm
-                tournamentName={tournament.name}
+                tournamentId={tournament.id}
                 entryFee={tournament.entryFee}
               />
             ) : (
-              <div className="rounded-lg bg-muted/50 p-4 text-center">
-                <p className="text-sm text-muted-foreground">
+              <div className="rounded-xl bg-white/[0.03] border border-white/5 p-6 text-center">
+                <p className="text-sm text-white/40 leading-relaxed">
                   {tournament.status === "registration_closed"
                     ? "Registration is closed for this tournament."
                     : tournament.registeredTeams >= tournament.maxTeams
