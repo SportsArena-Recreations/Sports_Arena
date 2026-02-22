@@ -9,7 +9,7 @@ const navLinks = [
     { label: "Home", path: "/" },
     { label: "Facilities", path: "/facilities" },
     { label: "Tournaments", path: "/tournaments" },
-    { label: "Contact", path: "/contact" },
+    { label: "Matches", path: "/matches" },
 ];
 
 function getInitials(name: string | null, email: string | null | undefined): string {

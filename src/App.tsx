@@ -19,6 +19,7 @@ import ManageFacilities from "./pages/admin/ManageFacilities";
 import ManageBookings from "./pages/admin/ManageBookings";
 import ManageTournaments from "./pages/admin/ManageTournaments";
 import ManageTeams from "./pages/admin/ManageTeams";
+import Matches from "./pages/Matches";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/facilities/:id" element={<FacilityDetail />} />
               <Route path="/tournaments" element={<Tournaments />} />
               <Route path="/tournaments/:id" element={<TournamentDetail />} />
+              <Route path="/matches" element={<Matches />} />
             </Route>
 
             {/* Admin routes */}
