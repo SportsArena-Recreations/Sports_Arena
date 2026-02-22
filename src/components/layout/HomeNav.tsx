@@ -1,7 +1,9 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { arenaConfig } from "@/config/arena.config";
-import { Menu, X, Zap, LogIn, LogOut, UserCircle2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import {
+    Menu, X, Zap, LogIn, LogOut, UserCircle2, ChevronDown, Settings,
+} from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 
@@ -12,12 +14,71 @@ const navLinks = [
     { label: "Contact", path: "/contact" },
 ];
 
+/** Dropdown shown when user clicks their email pill */
+function UserDropdown({ onClose }: { onClose: () => void }) {
+    const { user, isAdmin, signOut } = useAuth();
+    const navigate = useNavigate();
+
+    const handleSignOut = async () => {
+        onClose();
+        await signOut();
+        navigate("/");
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: -8, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.96 }}
+            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute right-0 top-full mt-2.5 min-w-[220px] bg-black/70 backdrop-blur-2xl border border-white/[0.08] rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.5)] overflow-hidden z-[60]"
+        >
+            {/* Signed in as */}
+            <div className="px-4 py-3 border-b border-white/[0.06]">
+                <p className="text-[10px] text-white/30 font-semibold tracking-widest uppercase mb-0.5">Signed in as</p>
+                <p className="text-xs text-white/60 truncate font-medium">{user?.email}</p>
+            </div>
+            <div className="p-1.5 space-y-0.5">
+                <Link
+                    to="/profile"
+                    onClick={onClose}
+                    className="flex items-center gap-3 px-3 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/[0.07] rounded-xl transition-all"
+                >
+                    <Settings size={14} strokeWidth={1.75} className="flex-shrink-0" />
+                    Profile &amp; settings
+                </Link>
+                {isAdmin && (
+                    <Link
+                        to="/admin"
+                        onClick={onClose}
+                        className="flex items-center gap-3 px-3 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/[0.07] rounded-xl transition-all"
+                    >
+                        <UserCircle2 size={14} strokeWidth={1.75} className="flex-shrink-0" />
+                        Admin dashboard
+                    </Link>
+                )}
+            </div>
+            <div className="p-1.5 pt-0 border-t border-white/[0.06]">
+                <button
+                    onClick={handleSignOut}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-red-400/70 hover:text-red-400 hover:bg-red-500/[0.08] rounded-xl transition-all"
+                >
+                    <LogOut size={14} strokeWidth={1.75} className="flex-shrink-0" />
+                    Sign out
+                </button>
+            </div>
+        </motion.div>
+    );
+}
+
+
 export function HomeNav() {
     const location = useLocation();
-    const navigate = useNavigate();
-    const { user, signOut } = useAuth();
+    const { user, isAdmin } = useAuth();
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 60);
@@ -25,26 +86,34 @@ export function HomeNav() {
         return () => window.removeEventListener("scroll", onScroll);
     }, []);
 
-    const handleSignOut = async () => {
-        await signOut();
-        navigate("/");
-    };
+    useEffect(() => {
+        setMobileOpen(false);
+        setDropdownOpen(false);
+    }, [location.pathname]);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+        if (dropdownOpen) document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [dropdownOpen]);
 
     return (
         <>
             <header
                 className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled
-                        ? "bg-black/70 backdrop-blur-xl border-b border-white/[0.06] shadow-[0_4px_40px_rgba(0,0,0,0.6)]"
-                        : "bg-transparent border-b border-transparent"
+                    ? "bg-black/70 backdrop-blur-xl border-b border-white/[0.06] shadow-[0_4px_40px_rgba(0,0,0,0.6)]"
+                    : "bg-transparent border-b border-transparent"
                     }`}
             >
                 <div className="container mx-auto flex h-[72px] items-center justify-between px-6 max-w-7xl">
                     {/* Logo */}
                     <Link to="/" className="flex items-center gap-3 group flex-shrink-0">
                         <div
-                            className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-300 ${scrolled
-                                    ? "bg-white/10 border border-white/20"
-                                    : "bg-white/10 border border-white/10"
+                            className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-300 ${scrolled ? "bg-white/10 border border-white/20" : "bg-white/10 border border-white/10"
                                 } group-hover:border-white/40`}
                         >
                             <span className="font-display text-lg font-bold text-white">A</span>
@@ -54,15 +123,13 @@ export function HomeNav() {
                         </span>
                     </Link>
 
-                    {/* Desktop Nav Links */}
+                    {/* Desktop Nav */}
                     <nav className="hidden md:flex items-center gap-1">
                         {navLinks.map((link) => (
                             <Link
                                 key={link.path}
                                 to={link.path}
-                                className={`relative px-4 py-2 text-sm font-medium tracking-wide transition-colors rounded-full ${location.pathname === link.path
-                                        ? "text-white"
-                                        : "text-white/50 hover:text-white/90"
+                                className={`relative px-4 py-2 text-sm font-medium tracking-wide transition-colors rounded-full ${location.pathname === link.path ? "text-white" : "text-white/50 hover:text-white/90"
                                     }`}
                             >
                                 {location.pathname === link.path && (
@@ -77,30 +144,28 @@ export function HomeNav() {
                         ))}
                     </nav>
 
-                    {/* Desktop CTA */}
+                    {/* Desktop right side */}
                     <div className="hidden md:flex items-center gap-3">
-                        <Link
-                            to="/admin"
-                            className="text-xs font-semibold tracking-widest uppercase text-white/40 hover:text-white/70 transition-colors px-2"
-                        >
-                            Admin
-                        </Link>
-
                         {user ? (
-                            <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/10">
-                                    <UserCircle2 size={15} className="text-white/60" />
-                                    <span className="text-xs text-white/70 font-medium max-w-[120px] truncate">
+                            <div className="relative" ref={dropdownRef}>
+                                <button
+                                    onClick={() => setDropdownOpen((o) => !o)}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/10 hover:border-white/25 transition-all"
+                                >
+                                    <UserCircle2 size={15} className="text-white/60 flex-shrink-0" />
+                                    <span className="text-xs text-white/70 font-medium max-w-[130px] truncate">
                                         {user.email}
                                     </span>
-                                </div>
-                                <button
-                                    onClick={handleSignOut}
-                                    className="flex items-center gap-1.5 h-9 px-4 rounded-full border border-white/10 text-white/50 hover:text-white hover:border-white/30 text-xs font-semibold tracking-wide transition-all"
-                                >
-                                    <LogOut size={13} strokeWidth={2.5} />
-                                    Sign out
+                                    <ChevronDown
+                                        size={12}
+                                        className={`text-white/40 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
+                                    />
                                 </button>
+                                <AnimatePresence>
+                                    {dropdownOpen && (
+                                        <UserDropdown onClose={() => setDropdownOpen(false)} />
+                                    )}
+                                </AnimatePresence>
                             </div>
                         ) : (
                             <div className="flex items-center gap-2">
@@ -120,10 +185,10 @@ export function HomeNav() {
                         )}
                     </div>
 
-                    {/* Mobile Hamburger */}
+                    {/* Mobile hamburger */}
                     <button
                         className="md:hidden text-white/70 hover:text-white transition-colors p-1"
-                        onClick={() => setMobileOpen(!mobileOpen)}
+                        onClick={() => setMobileOpen((o) => !o)}
                         aria-label="Toggle menu"
                     >
                         {mobileOpen ? <X size={22} /> : <Menu size={22} />}
@@ -131,11 +196,10 @@ export function HomeNav() {
                 </div>
             </header>
 
-            {/* Mobile Menu Drawer */}
+            {/* Mobile Drawer */}
             <AnimatePresence>
                 {mobileOpen && (
                     <>
-                        {/* Backdrop */}
                         <motion.div
                             key="backdrop"
                             initial={{ opacity: 0 }}
@@ -145,7 +209,6 @@ export function HomeNav() {
                             className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
                             onClick={() => setMobileOpen(false)}
                         />
-                        {/* Drawer */}
                         <motion.div
                             key="drawer"
                             initial={{ opacity: 0, y: -16 }}
@@ -161,28 +224,40 @@ export function HomeNav() {
                                         to={link.path}
                                         onClick={() => setMobileOpen(false)}
                                         className={`px-4 py-3 rounded-xl text-sm font-medium transition-colors ${location.pathname === link.path
-                                                ? "bg-white/10 text-white border border-white/10"
-                                                : "text-white/60 hover:bg-white/5 hover:text-white"
+                                            ? "bg-white/10 text-white border border-white/10"
+                                            : "text-white/60 hover:bg-white/5 hover:text-white"
                                             }`}
                                     >
                                         {link.label}
                                     </Link>
                                 ))}
                             </nav>
+
                             <div className="mt-4 pt-4 border-t border-white/10 flex flex-col gap-2">
                                 {user ? (
                                     <>
-                                        <div className="flex items-center gap-2 px-4 py-2">
-                                            <UserCircle2 size={16} className="text-white/40" />
-                                            <span className="text-sm text-white/50 truncate">{user.email}</span>
-                                        </div>
-                                        <button
-                                            onClick={() => { handleSignOut(); setMobileOpen(false); }}
-                                            className="w-full py-3 rounded-xl text-sm font-medium text-white/50 hover:text-white hover:bg-white/5 transition-colors text-left px-4 flex items-center gap-2"
+                                        <Link
+                                            to="/profile"
+                                            onClick={() => setMobileOpen(false)}
+                                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
                                         >
-                                            <LogOut size={14} />
-                                            Sign out
-                                        </button>
+                                            <Settings size={15} />
+                                            <div>
+                                                <p className="font-medium leading-none">Profile & settings</p>
+                                                <p className="text-xs text-white/30 mt-1 truncate">{user.email}</p>
+                                            </div>
+                                        </Link>
+                                        {isAdmin && (
+                                            <Link
+                                                to="/admin"
+                                                onClick={() => setMobileOpen(false)}
+                                                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
+                                            >
+                                                <UserCircle2 size={15} />
+                                                Admin dashboard
+                                            </Link>
+                                        )}
+                                        <MobileSignOutButton onDone={() => setMobileOpen(false)} />
                                     </>
                                 ) : (
                                     <>
@@ -206,5 +281,26 @@ export function HomeNav() {
                 )}
             </AnimatePresence>
         </>
+    );
+}
+
+function MobileSignOutButton({ onDone }: { onDone: () => void }) {
+    const { signOut } = useAuth();
+    const navigate = useNavigate();
+
+    const handleSignOut = async () => {
+        onDone();
+        await signOut();
+        navigate("/");
+    };
+
+    return (
+        <button
+            onClick={handleSignOut}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium text-red-400/80 hover:text-red-400 hover:bg-red-500/[0.06] transition-colors"
+        >
+            <LogOut size={15} />
+            Sign out
+        </button>
     );
 }
