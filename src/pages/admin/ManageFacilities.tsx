@@ -528,16 +528,76 @@ function FacilityModal({ editing, onClose, onSaved }: ModalProps) {
 // ─── DeleteConfirm ───────────────────────────────────────────────────────────
 
 function DeleteConfirm({
-  facility, onClose, onDeleted,
-}: { facility: Facility; onClose: () => void; onDeleted: () => void }) {
+  facility, facilities, onClose, onDeleted,
+}: { facility: Facility; facilities: Facility[]; onClose: () => void; onDeleted: () => void }) {
   const [deleting, setDeleting] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [linkedCount, setLinkedCount] = useState(0);
+  const [migrationId, setMigrationId] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const availableFacilities = facilities.filter(f => f.id !== facility.id && f.status !== "closed");
+
+  useEffect(() => {
+    supabase.from("tournaments").select("id", { count: "exact", head: true })
+      .eq("facility_id", facility.id)
+      .then(({ count, error }) => {
+        if (!error) setLinkedCount(count || 0);
+        setChecking(false);
+      });
+  }, [facility.id]);
 
   const confirm = async () => {
+    if (linkedCount > 0 && !migrationId) {
+      setError("Please select a facility to migrate tournaments to.");
+      return;
+    }
+
     setDeleting(true);
-    await facilityService.delete(facility.id);
+    setError(null);
+
+    // Migrate tournaments first if needed
+    if (linkedCount > 0 && migrationId) {
+      const target = availableFacilities.find(f => f.id === migrationId);
+      if (target) {
+        const { error: migErr } = await supabase.from("tournaments").update({
+          facility_id: target.id,
+          facility_name: target.name
+        }).eq("facility_id", facility.id);
+
+        if (migErr) {
+          setError("Failed to migrate tournaments: " + migErr.message);
+          setDeleting(false);
+          return;
+        }
+      }
+    }
+
+    const res = await facilityService.delete(facility.id);
     setDeleting(false);
+
+    if (!res.success) {
+      setError(res.message || "Failed to delete facility. There may be other linked assets.");
+      return;
+    }
+
     onDeleted();
   };
+
+  if (checking) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[80] flex items-center justify-center p-4"
+        style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)" }}
+      >
+        <div className="w-full max-w-sm bg-[#0d0d11] border border-white/[0.09] rounded-2xl p-6 flex flex-col items-center justify-center gap-3">
+          <Loader2 size={24} className="text-white/40 animate-spin" />
+          <p className="text-xs text-white/50">Verifying facility links…</p>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -552,21 +612,59 @@ function DeleteConfirm({
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.2 }}
-        className="w-full max-w-sm bg-[#0d0d11] border border-white/[0.09] rounded-2xl p-6 shadow-2xl"
+        className="w-full max-w-md bg-[#0d0d11] border border-white/[0.09] rounded-2xl p-6 shadow-2xl"
       >
         <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20 mb-4">
           <AlertTriangle size={22} className="text-red-400" />
         </div>
         <h3 className="text-base font-bold text-white mb-1">Delete facility?</h3>
-        <p className="text-sm text-white/40 mb-6">
+        <p className="text-sm text-white/40 mb-4">
           <span className="text-white/70 font-medium">{facility.name}</span> will be permanently removed. This cannot be undone.
         </p>
-        <div className="flex gap-3">
+
+        {linkedCount > 0 && (
+          <div className="mb-6 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 space-y-3">
+            <p className="text-xs text-orange-400 leading-relaxed">
+              This facility is currently hosting <strong>{linkedCount} tournament(s)</strong>. To continue with deletion, please migrate these tournaments to another available facility.
+            </p>
+            {availableFacilities.length > 0 ? (
+              <div className="relative">
+                <select
+                  value={migrationId}
+                  onChange={(e) => {
+                    setMigrationId(e.target.value);
+                    setError(null);
+                  }}
+                  className="w-full appearance-none bg-black/40 border border-orange-500/20 rounded-lg pl-3 pr-8 py-2.5 text-xs text-orange-100 focus:outline-none focus:border-orange-500/50 transition-all cursor-pointer"
+                >
+                  <option value="" disabled className="bg-[#0d0d11] text-white/40">Select replacement facility…</option>
+                  {availableFacilities.map(f => (
+                    <option key={f.id} value={f.id} className="bg-[#0d0d11]">{f.name} ({f.type})</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-500/50 pointer-events-none" />
+              </div>
+            ) : (
+              <p className="text-xs text-red-400 font-semibold bg-red-500/10 p-2 rounded-lg">
+                No other available facilities to migrate to. You must create one first.
+              </p>
+            )}
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-4 text-xs text-red-400 flex items-start gap-1.5 p-3 rounded-lg bg-red-500/10">
+            <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+            <span className="leading-tight">{error}</span>
+          </div>
+        )}
+
+        <div className="flex gap-3 mt-6">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-white/[0.08] text-sm text-white/50 hover:text-white transition-all">
             Cancel
           </button>
           <button
-            onClick={confirm} disabled={deleting}
+            onClick={confirm} disabled={deleting || (linkedCount > 0 && !migrationId)}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-500/90 text-white text-sm font-bold hover:bg-red-500 transition-all disabled:opacity-50"
           >
             {deleting && <Loader2 size={13} className="animate-spin" />}
@@ -750,7 +848,7 @@ const ManageFacilities = () => {
       </AnimatePresence>
       <AnimatePresence>
         {deleteTarget && (
-          <DeleteConfirm facility={deleteTarget} onClose={() => setDeleteTarget(null)} onDeleted={onDeleted} />
+          <DeleteConfirm facility={deleteTarget} facilities={facilities} onClose={() => setDeleteTarget(null)} onDeleted={onDeleted} />
         )}
       </AnimatePresence>
     </div>
