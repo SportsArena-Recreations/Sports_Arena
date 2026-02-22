@@ -36,7 +36,7 @@ export function BookingForm({ facilityName, selectedSlot }: BookingFormProps) {
             <>
               <p>Date: {selectedSlot.date}</p>
               <p>Time: {selectedSlot.startTime} - {selectedSlot.endTime}</p>
-              <p className="font-semibold text-foreground">Total: ${selectedSlot.price}</p>
+              <p className="font-semibold text-foreground">Total: ₦{selectedSlot.price.toLocaleString("en-NG")}</p>
             </>
           ) : (
             <p className="text-warning">Please select a time slot above</p>
