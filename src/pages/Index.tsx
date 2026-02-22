@@ -86,16 +86,18 @@ const Index = () => {
             transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
             className="w-full mt-auto pt-16"
           >
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center w-full px-4 sm:px-0">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center w-full px-4 sm:px-0">
               <Link to="/facilities" className="w-full sm:w-auto">
-                <button className="w-full sm:w-auto h-14 text-sm font-semibold tracking-widest uppercase bg-transparent text-white border border-white/20 hover:border-white/50 hover:bg-white/5 rounded-full px-8 transition-all flex justify-center items-center shadow-none">
-                  Book a Facility <ArrowRight size={16} className="ml-3" />
-                </button>
+                <GlitchButton hero>
+                  <span className="flex items-center">
+                    Book a Facility <ArrowRight size={16} className="ml-3" />
+                  </span>
+                </GlitchButton>
               </Link>
               <Link to="/tournaments" className="w-full sm:w-auto">
-                <button className="w-full sm:w-auto h-14 text-sm font-semibold tracking-widest uppercase bg-transparent text-white border border-white/20 hover:border-white/50 hover:bg-white/5 rounded-full px-8 transition-all flex justify-center items-center shadow-none">
+                <GlitchButton hero>
                   Explore Tournaments
-                </button>
+                </GlitchButton>
               </Link>
             </div>
           </motion.div>
