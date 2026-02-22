@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Tournament } from "@/features/tournaments/types";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -8,17 +9,35 @@ interface TournamentCardProps {
 }
 
 export function TournamentCard({ tournament }: TournamentCardProps) {
+  const [imgError, setImgError] = useState(false);
+  const hasImage = tournament.imageUrl && tournament.imageUrl.startsWith("http") && !imgError;
+
   return (
     <Link
       to={`/tournaments/${tournament.id}`}
       className="group block"
     >
       <div className="relative h-64 w-full overflow-hidden rounded-2xl bg-[#111] border border-white/5 mb-6 flex flex-col items-center justify-center">
-        <Trophy size={48} className="mb-4 text-white/50 group-hover:text-white transition-colors duration-300" />
-        <span className="text-sm font-semibold uppercase tracking-widest text-white/40 group-hover:text-white/80 transition-colors duration-300">
-          {tournament.sport}
-        </span>
-        <div className="absolute right-4 top-4">
+        {hasImage ? (
+          <>
+            <img
+              src={tournament.imageUrl}
+              alt={tournament.name}
+              onError={() => setImgError(true)}
+              className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 group-hover:opacity-80 transition-all duration-700 ease-out"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#020202]/80 via-transparent to-transparent pointer-events-none" />
+          </>
+        ) : (
+          <>
+            <Trophy size={48} className="mb-4 text-white/50 group-hover:text-white transition-colors duration-300 relative z-10" />
+            <span className="text-sm font-semibold uppercase tracking-widest text-white/40 group-hover:text-white/80 transition-colors duration-300 relative z-10">
+              {tournament.sport}
+            </span>
+          </>
+        )}
+
+        <div className="absolute right-4 top-4 z-20">
           <StatusBadge status={tournament.status} />
         </div>
       </div>

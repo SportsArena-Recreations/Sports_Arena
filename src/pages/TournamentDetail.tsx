@@ -31,13 +31,36 @@ const TournamentDetail = () => {
 
       <div className="grid gap-10 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <div className="mb-6">
-            <div className="flex items-center gap-3 mb-2">
+          {/* Cover Image banner */}
+          <div className="relative h-64 md:h-80 w-full overflow-hidden rounded-2xl mb-8 bg-[#111] border border-white/5 flex flex-col items-center justify-center">
+            {tournament.imageUrl && tournament.imageUrl.startsWith("http") ? (
+              <>
+                <img
+                  src={tournament.imageUrl}
+                  alt={tournament.name}
+                  className="absolute inset-0 w-full h-full object-cover opacity-60"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#020202] via-[#020202]/40 to-transparent" />
+              </>
+            ) : (
+              <>
+                <Trophy size={64} className="mb-4 text-white/10" />
+                <span className="text-sm font-semibold uppercase tracking-widest text-white/20">
+                  {tournament.sport}
+                </span>
+              </>
+            )}
+            <div className="absolute left-6 bottom-6 z-10 flex items-center gap-3">
               <StatusBadge status={tournament.status} />
-              <span className="text-sm text-muted-foreground">{tournament.sport}</span>
+              <span className="text-sm text-muted-foreground bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 font-medium">
+                {tournament.sport}
+              </span>
             </div>
-            <h1 className="font-display text-3xl font-bold">{tournament.name}</h1>
-            <p className="mt-3 text-muted-foreground">{tournament.description}</p>
+          </div>
+
+          <div className="mb-6">
+            <h1 className="font-display text-3xl font-bold md:text-4xl tracking-tight">{tournament.name}</h1>
+            <p className="mt-4 text-muted-foreground text-lg leading-relaxed">{tournament.description}</p>
           </div>
 
           {/* Details grid */}

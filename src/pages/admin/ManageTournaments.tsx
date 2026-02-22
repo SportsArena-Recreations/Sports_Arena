@@ -126,7 +126,7 @@ function TournamentModal({ editing, facilities, onClose, onSaved }: ModalProps) 
         canvas.toBlob(
           (blob) => blob ? resolve({ blob, ext }) : reject(new Error("Canvas compression failed")),
           mimeType,
-          0.85
+          0.95 // 95% quality — preserves maximum visual quality while still reducing file size
         );
       };
       img.onerror = () => reject(new Error("Could not load image"));
@@ -391,8 +391,9 @@ function TournamentModal({ editing, facilities, onClose, onSaved }: ModalProps) 
                     type="number" min={0}
                     className={`${inputCls} pl-8`}
                     placeholder="10000"
-                    value={form.entryFee || ""}
+                    value={form.entryFee === 0 ? "" : form.entryFee}
                     onChange={(e) => set("entryFee", Number(e.target.value))}
+                    onWheel={(e) => (e.target as HTMLElement).blur()}
                   />
                 </div>
               </div>
@@ -405,8 +406,9 @@ function TournamentModal({ editing, facilities, onClose, onSaved }: ModalProps) 
                     type="number" min={0}
                     className={`${inputCls} pl-8`}
                     placeholder="50000"
-                    value={form.prizePool || ""}
+                    value={form.prizePool === 0 ? "" : form.prizePool}
                     onChange={(e) => set("prizePool", Number(e.target.value))}
+                    onWheel={(e) => (e.target as HTMLElement).blur()}
                   />
                 </div>
               </div>

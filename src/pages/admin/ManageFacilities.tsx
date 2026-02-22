@@ -123,7 +123,7 @@ function FacilityModal({ editing, onClose, onSaved }: ModalProps) {
         canvas.toBlob(
           (blob) => blob ? resolve({ blob, ext }) : reject(new Error("Canvas compression failed")),
           mimeType,
-          0.85   // 85% quality — visually lossless, ~60-80% smaller
+          0.95   // 95% quality — preserves maximum visual quality while still reducing file size
         );
       };
       img.onerror = () => reject(new Error("Could not load image"));
