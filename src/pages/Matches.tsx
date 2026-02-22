@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Trophy, Users, Calendar, Clock, ChevronRight, Swords, CheckCircle2, Timer, Shield, Info } from "lucide-react";
 import { Footer } from "@/components/layout/Footer";
 import { tournamentService } from "@/features/tournaments/services/tournament.service";
+import { facilityService } from "@/features/facilities/services/facility.service";
+import { sportService, Sport } from "@/features/sports/services/sport.service";
 import { matchService } from "@/features/matches/services/match.service";
 import { Match as DBMatch } from "@/features/matches/types";
 import { Tournament } from "@/features/tournaments/types";
@@ -351,16 +352,19 @@ function TournamentCard({ tournament, onClickViewAll }: { tournament: Tournament
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function Matches() {
     const [tournaments, setTournaments] = useState<TournamentMatches[]>([]);
-    const [selected, setSelected] = useState<TournamentMatches | null>(null);
+    const [sports, setSports] = useState<Sport[]>([]);
+    const [selectedSport, setSelectedSport] = useState<string>("all");
     const [filter, setFilter] = useState<string>("all");
 
     useEffect(() => {
         Promise.all([
             tournamentService.getAll(),
-            matchService.getAll()
-        ]).then(([tRes, mRes]) => {
+            matchService.getAll(),
+            sportService.getAll()
+        ]).then(([tRes, mRes, sRes]) => {
             const dbTournaments = tRes.data || [];
             const dbMatches = mRes.data || [];
+            setSports(sRes.data || []);
 
             // 1. Group matches into Tournaments
             const mappedTournaments: TournamentMatches[] = dbTournaments.map(t => {
@@ -411,16 +415,21 @@ export default function Matches() {
     const liveCount = tournaments.reduce((a, c) => a + c.matches.filter((m) => m.status === "live").length, 0);
 
     const filterOptions = [
-        { label: "All Matches", value: "all" },
-        { label: "Friendly Matches", value: "friendly" },
+        { label: "All Formats", value: "all" },
+        { label: "Friendlies", value: "friendly" },
         ...tournaments.filter(t => t.type !== "friendly").map(t => ({ label: t.title, value: t.id }))
     ];
 
-    const filteredTournaments = filter === "all"
+    let filteredTournaments = filter === "all"
         ? tournaments
         : filter === "friendly"
             ? tournaments.filter(t => t.type === "friendly")
             : tournaments.filter(t => t.id === filter);
+
+    // Secondary filter by Sport
+    if (selectedSport !== "all") {
+        filteredTournaments = filteredTournaments.filter(t => t.sport === selectedSport);
+    }
 
     return (
         <div className="bg-[#020202] text-white min-h-screen font-sans">
@@ -469,8 +478,9 @@ export default function Matches() {
             </section>
 
             {/* Category Filter */}
-            <section className="pt-8 pb-4 px-4 sm:px-6 sticky top-[72px] z-30 bg-[#020202]/80 backdrop-blur-md border-b border-white/[0.05]">
+            <section className="pt-8 pb-4 px-4 sm:px-6 sticky top-[72px] z-30 bg-[#020202]/90 backdrop-blur-md border-b border-white/[0.05] space-y-4">
                 <div className="container mx-auto max-w-4xl">
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-white/30 mb-2">Filter by Tournament</p>
                     <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide snap-x">
                         {filterOptions.map(opt => (
                             <button
@@ -482,6 +492,33 @@ export default function Matches() {
                                     }`}
                             >
                                 {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="container mx-auto max-w-4xl">
+                    <p className="text-[10px] uppercase font-bold tracking-widest text-white/30 mb-2">Filter by Sport</p>
+                    <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide snap-x">
+                        <button
+                            onClick={() => setSelectedSport("all")}
+                            className={`snap-start whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all ${selectedSport === "all"
+                                ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+                                : "bg-white/[0.03] text-white/60 hover:bg-white/[0.08] hover:text-white border border-white/[0.05]"
+                                }`}
+                        >
+                            All Sports
+                        </button>
+                        {sports.map(sport => (
+                            <button
+                                key={sport.id}
+                                onClick={() => setSelectedSport(sport.name)}
+                                className={`snap-start whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all ${selectedSport === sport.name
+                                    ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+                                    : "bg-white/[0.03] text-white/60 hover:bg-white/[0.08] hover:text-white border border-white/[0.05]"
+                                    }`}
+                            >
+                                {sport.name}
                             </button>
                         ))}
                     </div>

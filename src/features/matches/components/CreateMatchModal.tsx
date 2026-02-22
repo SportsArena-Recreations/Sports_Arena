@@ -4,8 +4,11 @@ import { X, Calendar, Clock, Trophy, Users, Shield, Save, Loader2, AlertTriangle
 import { MatchType, MatchStatus, Match } from "../types";
 import { teamService } from "@/features/teams/services/team.service";
 import { tournamentService } from "@/features/tournaments/services/tournament.service";
+import { facilityService } from "@/features/facilities/services/facility.service";
+import { sportService, Sport } from "@/features/sports/services/sport.service";
 import { Team } from "@/features/teams/types";
 import { Tournament } from "@/features/tournaments/types";
+import { Facility } from "@/features/facilities/types";
 
 function SuggestInput({
     value,
@@ -101,6 +104,9 @@ export function CreateMatchModal({ isOpen, onClose, onSave }: CreateMatchModalPr
     const [teamOptions, setTeamOptions] = useState<string[]>([]);
     const [tournaments, setTournaments] = useState<Tournament[]>([]);
     const [tournamentOptions, setTournamentOptions] = useState<string[]>([]);
+    const [facilities, setFacilities] = useState<Facility[]>([]);
+    const [facilityOptions, setFacilityOptions] = useState<string[]>([]);
+    const [sports, setSports] = useState<Sport[]>([]);
 
     useEffect(() => {
         if (isOpen) {
@@ -108,6 +114,11 @@ export function CreateMatchModal({ isOpen, onClose, onSave }: CreateMatchModalPr
                 setTournaments(res.data);
                 setTournamentOptions(res.data.map(t => t.name));
             });
+            facilityService.getAll().then(res => {
+                setFacilities(res.data);
+                setFacilityOptions(res.data.map(f => f.name));
+            });
+            sportService.getAll().then(res => setSports(res.data));
             Promise.all([
                 teamService.getAll(),
                 tournamentService.getAllRegistrations()
@@ -275,14 +286,17 @@ export function CreateMatchModal({ isOpen, onClose, onSave }: CreateMatchModalPr
                             {type === "friendly" && (
                                 <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.05]">
                                     <label className="text-xs text-white/60 mb-2 block">Sport / Category</label>
-                                    <input
-                                        type="text"
+                                    <select
                                         required={type === "friendly"}
                                         value={sport}
                                         onChange={(e) => setSport(e.target.value)}
-                                        placeholder="e.g. Mixed, Basketball, Soccer"
-                                        className="w-full bg-[#1a1a20] border border-white/[0.1] rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20 focus:border-white/20 focus:outline-none transition-colors"
-                                    />
+                                        className="w-full bg-[#1a1a20] border border-white/[0.1] rounded-xl px-4 py-2.5 text-sm text-white focus:border-white/20 focus:outline-none transition-colors appearance-none"
+                                    >
+                                        <option value="" disabled>-- Select Sport --</option>
+                                        {sports.map(s => (
+                                            <option key={s.id} value={s.name}>{s.name}</option>
+                                        ))}
+                                    </select>
                                     <p className="text-[10px] text-white/30 mt-2">This is used as the filter category on the public Matches page.</p>
                                 </div>
                             )}
@@ -375,14 +389,12 @@ export function CreateMatchModal({ isOpen, onClose, onSave }: CreateMatchModalPr
                                                 </div>
                                             </div>
                                             <div>
-                                                <input
-                                                    type="text"
-                                                    required
+                                                <SuggestInput
                                                     value={pairing.venue}
-                                                    onChange={(e) => {
-                                                        const newVal = e.target.value;
+                                                    onChange={(newVal) => {
                                                         setPairings(prev => prev.map(p => p.id === pairing.id ? { ...p, venue: newVal } : p));
                                                     }}
+                                                    options={facilityOptions}
                                                     placeholder="Venue"
                                                     className="w-full bg-[#1a1a20] border border-white/[0.1] rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-white/20 focus:border-white/20 focus:outline-none transition-colors"
                                                 />
