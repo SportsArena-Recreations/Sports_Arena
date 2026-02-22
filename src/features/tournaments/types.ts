@@ -5,6 +5,8 @@ export interface Tournament {
   description: string;
   startDate: string;
   endDate: string;
+  startTime?: string;
+  endTime?: string;
   registrationDeadline: string;
   maxTeams: number;
   registeredTeams: number;

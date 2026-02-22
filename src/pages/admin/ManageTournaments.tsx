@@ -30,7 +30,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 const EMPTY_FORM: Omit<Tournament, "id"> = {
   name: "", sport: "Soccer", description: "",
-  startDate: "", endDate: "", registrationDeadline: "",
+  startDate: "", endDate: "", startTime: "", endTime: "", registrationDeadline: "",
   maxTeams: 8, registeredTeams: 0, entryFee: 0, prizePool: 0,
   status: "upcoming", rules: [], facilityId: "", facilityName: "",
   imageUrl: "",
@@ -351,6 +351,25 @@ function TournamentModal({ editing, facilities, onClose, onSaved }: ModalProps) 
                   value={form.endDate}
                   onChange={(e) => set("endDate", e.target.value)}
                   required
+                />
+              </div>
+              {/* Daily time window */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-white/55">Daily Start Time</label>
+                <input
+                  type="time"
+                  className={inputCls + " [&::-webkit-calendar-picker-indicator]:invert-[1] [&::-webkit-calendar-picker-indicator]:opacity-50"}
+                  value={form.startTime ?? ""}
+                  onChange={(e) => set("startTime", e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-white/55">Daily End Time</label>
+                <input
+                  type="time"
+                  className={inputCls + " [&::-webkit-calendar-picker-indicator]:invert-[1] [&::-webkit-calendar-picker-indicator]:opacity-50"}
+                  value={form.endTime ?? ""}
+                  onChange={(e) => set("endTime", e.target.value)}
                 />
               </div>
               <div className="space-y-1.5">
