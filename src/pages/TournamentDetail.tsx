@@ -4,7 +4,7 @@ import { tournamentService } from "@/features/tournaments/services/tournament.se
 import { Tournament } from "@/features/tournaments/types";
 import { TeamRegistrationForm } from "@/features/tournaments/components/TeamRegistrationForm";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { ChevronLeft, Calendar, Users, DollarSign, Trophy, MapPin } from "lucide-react";
+import { ChevronLeft, Calendar, Users, Banknote, Trophy, MapPin } from "lucide-react";
 
 const TournamentDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,13 +31,36 @@ const TournamentDetail = () => {
 
       <div className="grid gap-10 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <div className="mb-6">
-            <div className="flex items-center gap-3 mb-2">
+          {/* Cover Image banner */}
+          <div className="relative h-64 md:h-80 w-full overflow-hidden rounded-2xl mb-8 bg-[#111] border border-white/5 flex flex-col items-center justify-center">
+            {tournament.imageUrl && tournament.imageUrl.startsWith("http") ? (
+              <>
+                <img
+                  src={tournament.imageUrl}
+                  alt={tournament.name}
+                  className="absolute inset-0 w-full h-full object-cover opacity-60"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#020202] via-[#020202]/40 to-transparent" />
+              </>
+            ) : (
+              <>
+                <Trophy size={64} className="mb-4 text-white/10" />
+                <span className="text-sm font-semibold uppercase tracking-widest text-white/20">
+                  {tournament.sport}
+                </span>
+              </>
+            )}
+            <div className="absolute left-6 bottom-6 z-10 flex items-center gap-3">
               <StatusBadge status={tournament.status} />
-              <span className="text-sm text-muted-foreground">{tournament.sport}</span>
+              <span className="text-sm text-muted-foreground bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 font-medium">
+                {tournament.sport}
+              </span>
             </div>
-            <h1 className="font-display text-3xl font-bold">{tournament.name}</h1>
-            <p className="mt-3 text-muted-foreground">{tournament.description}</p>
+          </div>
+
+          <div className="mb-6">
+            <h1 className="font-display text-3xl font-bold md:text-4xl tracking-tight">{tournament.name}</h1>
+            <p className="mt-4 text-muted-foreground text-lg leading-relaxed">{tournament.description}</p>
           </div>
 
           {/* Details grid */}
@@ -46,8 +69,8 @@ const TournamentDetail = () => {
               { icon: Calendar, label: "Start Date", value: new Date(tournament.startDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) },
               { icon: Calendar, label: "End Date", value: new Date(tournament.endDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) },
               { icon: Users, label: "Teams", value: `${tournament.registeredTeams} / ${tournament.maxTeams}` },
-              { icon: DollarSign, label: "Entry Fee", value: `$${tournament.entryFee}` },
-              { icon: Trophy, label: "Prize Pool", value: `$${tournament.prizePool.toLocaleString()}` },
+              { icon: Banknote, label: "Entry Fee", value: tournament.entryFee === 0 ? "Free" : `₦${tournament.entryFee.toLocaleString()}` },
+              { icon: Trophy, label: "Prize Pool", value: `₦${tournament.prizePool.toLocaleString()}` },
               { icon: MapPin, label: "Venue", value: tournament.facilityName },
             ].map((item) => (
               <div key={item.label} className="rounded-lg border border-border bg-card p-4 card-shadow">
@@ -94,8 +117,8 @@ const TournamentDetail = () => {
                   {tournament.status === "registration_closed"
                     ? "Registration is closed for this tournament."
                     : tournament.registeredTeams >= tournament.maxTeams
-                    ? "This tournament is full."
-                    : "Registration is not yet open."}
+                      ? "This tournament is full."
+                      : "Registration is not yet open."}
                 </p>
               </div>
             )}

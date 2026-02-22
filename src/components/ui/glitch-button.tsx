@@ -1,36 +1,44 @@
 import React from 'react';
 import styled from 'styled-components';
 
-export const GlitchButton = ({ children, className }: { children: React.ReactNode; className?: string }) => {
-    return (
-        <StyledWrapper className={className}>
-            <div className="button-wrapper">
-                <button className="spiderverse-button">
-                    {children}
-                    <div className="glitch-layers">
-                        <div className="glitch-layer layer-1">{children}</div>
-                        <div className="glitch-layer layer-2">{children}</div>
-                    </div>
-                    <div className="noise" />
-                    <div className="glitch-slice" />
-                </button>
-            </div>
-        </StyledWrapper>
-    );
+export const GlitchButton = ({ children, className, hero = false }: { children: React.ReactNode; className?: string; hero?: boolean }) => {
+  return (
+    <StyledWrapper className={`${className} ${hero ? "w-full sm:w-auto" : ""}`} $hero={hero}>
+      <div className="button-wrapper">
+        <button className="spiderverse-button">
+          {children}
+          <div className="glitch-layers">
+            <div className="glitch-layer layer-1">{children}</div>
+            <div className="glitch-layer layer-2">{children}</div>
+          </div>
+          <div className="noise" />
+          <div className="glitch-slice" />
+        </button>
+      </div>
+    </StyledWrapper>
+  );
 }
 
-const StyledWrapper = styled.div`
+const StyledWrapper = styled.div<{ $hero?: boolean }>`
+  display: inline-flex;
+  
   .button-wrapper {
     position: relative;
     transform-style: preserve-3d;
     transition: transform 0.2s ease;
+    width: 100%;
   }
 
   .spiderverse-button {
     position: relative;
-    padding: 15px 30px;
-    font-size: 18px;
-    font-weight: 900;
+    padding: ${props => props.$hero ? '0 32px' : '15px 30px'};
+    height: ${props => props.$hero ? '56px' : 'auto'};
+    font-size: ${props => props.$hero ? '14px' : '18px'};
+    font-weight: ${props => props.$hero ? '600' : '900'};
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 50px;
     cursor: pointer;
