@@ -10,6 +10,7 @@ const navLinks = [
   { label: "Facilities", path: "/facilities" },
   { label: "Tournaments", path: "/tournaments" },
   { label: "Matches", path: "/matches" },
+  { label: "Bookings", path: "/bookings" },
   { label: "Community", path: "/community" },
 ];
 
