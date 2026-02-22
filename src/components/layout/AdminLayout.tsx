@@ -1,4 +1,4 @@
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { arenaConfig } from "@/config/arena.config";
 import {
   LayoutDashboard, Building2, CalendarDays,
@@ -21,7 +21,7 @@ function getInitials(name: string | null, email: string | null | undefined) {
 
 export function AdminLayout() {
   const location = useLocation();
-  const { user, fullName, signOut } = useAuth();
+  const { user, isAdmin, loading, fullName, signOut } = useAuth();
   const navigate = useNavigate();
 
   const initials = getInitials(fullName, user?.email);
@@ -31,6 +31,18 @@ export function AdminLayout() {
     await signOut();
     navigate("/");
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#080809]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white/80"></div>
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#080809]">
@@ -60,8 +72,8 @@ export function AdminLayout() {
                 key={link.path}
                 to={link.path}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${isActive
-                    ? "bg-white/[0.10] text-white border border-white/[0.08]"
-                    : "text-white/45 hover:text-white/80 hover:bg-white/[0.05]"
+                  ? "bg-white/[0.10] text-white border border-white/[0.08]"
+                  : "text-white/45 hover:text-white/80 hover:bg-white/[0.05]"
                   }`}
               >
                 <link.icon size={16} strokeWidth={isActive ? 2 : 1.75} />
@@ -108,8 +120,8 @@ export function AdminLayout() {
                   key={link.path}
                   to={link.path}
                   className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${isActive
-                      ? "bg-white/10 text-white"
-                      : "text-white/40 hover:text-white/70 hover:bg-white/[0.05]"
+                    ? "bg-white/10 text-white"
+                    : "text-white/40 hover:text-white/70 hover:bg-white/[0.05]"
                     }`}
                 >
                   <link.icon size={13} />

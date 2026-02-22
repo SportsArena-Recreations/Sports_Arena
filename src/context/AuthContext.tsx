@@ -86,13 +86,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: listener } = supabase.auth.onAuthStateChange(
             (_, newSession) => {
                 setSession(newSession);
-                setLoading(false);
 
                 if (newSession?.user) {
-                    fetchProfileData(newSession.user.id).then(applyProfile);
+                    fetchProfileData(newSession.user.id).then((data) => {
+                        applyProfile(data);
+                        setLoading(false);
+                    });
                 } else {
                     setRole(null);
                     setFullName(null);
+                    setLoading(false);
                 }
             }
         );
