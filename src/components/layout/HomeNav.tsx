@@ -10,6 +10,7 @@ const navLinks = [
     { label: "Facilities", path: "/facilities" },
     { label: "Tournaments", path: "/tournaments" },
     { label: "Matches", path: "/matches" },
+    { label: "Community", path: "/community" },
 ];
 
 function getInitials(name: string | null, email: string | null | undefined): string {
@@ -79,14 +80,22 @@ export function HomeNav() {
     const { user, isAdmin, fullName } = useAuth();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
-    const [scrolled, setScrolled] = useState(false);
+    const isHomePage = location.pathname === "/";
+    const [scrolled, setScrolled] = useState(!isHomePage);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        // On the homepage: transparent until scrolled 60px.
+        // On every other page: always show the solid bar.
+        if (!isHomePage) {
+            setScrolled(true);
+            return;
+        }
+        setScrolled(window.scrollY > 60);
         const onScroll = () => setScrolled(window.scrollY > 60);
         window.addEventListener("scroll", onScroll, { passive: true });
         return () => window.removeEventListener("scroll", onScroll);
-    }, []);
+    }, [isHomePage]);
 
     useEffect(() => {
         setMobileOpen(false);
@@ -113,7 +122,7 @@ export function HomeNav() {
                     : "bg-transparent border-b border-transparent"
                     }`}
             >
-                <div className="container mx-auto flex h-[72px] items-center justify-between px-6 max-w-7xl">
+                <div className="container mx-auto flex h-[72px] items-center justify-between px-4 max-w-7xl">
                     {/* Logo */}
                     <Link to="/" className="flex items-center gap-3 group flex-shrink-0">
                         <div
@@ -128,12 +137,12 @@ export function HomeNav() {
                     </Link>
 
                     {/* Desktop Nav */}
-                    <nav className="hidden md:flex items-center gap-1">
+                    <nav className="hidden md:flex items-center gap-0.5">
                         {navLinks.map((link) => (
                             <Link
                                 key={link.path}
                                 to={link.path}
-                                className={`relative px-4 py-2 text-sm font-medium tracking-wide transition-colors rounded-full ${location.pathname === link.path ? "text-white" : "text-white/50 hover:text-white/90"
+                                className={`relative px-3 py-1.5 text-sm font-medium tracking-wide transition-colors rounded-full whitespace-nowrap ${location.pathname === link.path ? "text-white" : "text-white/50 hover:text-white/90"
                                     }`}
                             >
                                 {location.pathname === link.path && (

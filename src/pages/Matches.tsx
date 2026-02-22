@@ -191,7 +191,7 @@ function MatchRow({ match, accent, border, compact = false }: { match: Match; ac
     const awayWon = homeScore !== null && awayScore !== null && awayScore > homeScore;
 
     return (
-        <div className={`rounded-xl border bg-white/[0.02] hover:bg-white/[0.05] transition-colors ${compact ? 'p-3' : 'p-4'} ${border}`}>
+        <div className={`rounded-xl border bg-white/[0.02] hover:bg-white/[0.05] transition-colors ${compact ? 'p-3' : 'p-3 sm:p-4'} ${border}`}>
             {/* Round + date row */}
             <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
                 {match.round && (
@@ -275,11 +275,11 @@ function TournamentModal({ tournament, onClose }: { tournament: TournamentMatche
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 40, scale: 0.97 }}
                 transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                className="relative z-10 w-full sm:max-w-2xl max-h-[90dvh] sm:max-h-[85vh] flex flex-col bg-[#08080a] border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl"
+                className="relative z-10 w-full sm:max-w-2xl max-h-[80dvh] sm:max-h-[85vh] flex flex-col bg-[#08080a] border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl"
             >
                 {/* Modal header */}
-                <div className={`px-6 pt-6 pb-5 border-b border-white/[0.06] flex-shrink-0 ${tournament.accentColor}`}>
-                    <div className="flex items-start justify-between gap-4">
+                <div className={`px-4 pt-5 pb-4 sm:px-6 sm:pt-6 sm:pb-5 border-b border-white/[0.06] flex-shrink-0 ${tournament.accentColor}`}>
+                    <div className="flex items-start justify-between gap-3 sm:gap-4">
                         <div>
                             <div className="flex items-center gap-2 mb-2">
                                 <span className={`text-[10px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full border ${tournament.accentText} ${tournament.accentBorder} bg-black/20`}>
@@ -300,7 +300,7 @@ function TournamentModal({ tournament, onClose }: { tournament: TournamentMatche
                 </div>
 
                 {/* Scrollable body */}
-                <div className="flex-1 overflow-y-auto px-5 py-5 space-y-8">
+                <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5 space-y-6 sm:space-y-8">
                     {results.length > 0 && (
                         <div>
                             <h3 className="text-[10px] font-bold tracking-widest uppercase text-white/40 mb-3 flex items-center gap-2">

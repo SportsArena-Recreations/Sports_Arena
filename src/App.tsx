@@ -20,6 +20,7 @@ import ManageBookings from "./pages/admin/ManageBookings";
 import ManageTournaments from "./pages/admin/ManageTournaments";
 import ManageTeams from "./pages/admin/ManageTeams";
 import Matches from "./pages/Matches";
+import Community from "./pages/Community";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
               <Route path="/tournaments" element={<Tournaments />} />
               <Route path="/tournaments/:id" element={<TournamentDetail />} />
               <Route path="/matches" element={<Matches />} />
+              <Route path="/community" element={<Community />} />
             </Route>
 
             {/* Admin routes */}
