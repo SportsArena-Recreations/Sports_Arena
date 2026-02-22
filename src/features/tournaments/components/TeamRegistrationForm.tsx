@@ -30,7 +30,7 @@ export function TeamRegistrationForm({ tournamentName, entryFee }: TeamRegistrat
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="rounded-lg border border-border bg-muted/30 p-4">
         <h4 className="font-display font-semibold mb-1">Registration Fee</h4>
-        <p className="text-2xl font-bold text-primary">${entryFee}</p>
+        <p className="text-2xl font-bold text-primary">{entryFee === 0 ? "Free" : `₦${entryFee.toLocaleString()}`}</p>
       </div>
 
       <div>

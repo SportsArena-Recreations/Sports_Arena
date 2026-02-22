@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Tournament } from "@/features/tournaments/types";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { Calendar, Users, Trophy, DollarSign } from "lucide-react";
+import { Calendar, Users, Trophy, Banknote } from "lucide-react";
 
 interface TournamentCardProps {
   tournament: Tournament;
@@ -41,12 +41,12 @@ export function TournamentCard({ tournament }: TournamentCardProps) {
             {tournament.registeredTeams}/{tournament.maxTeams} teams
           </span>
           <span className="flex items-center gap-2">
-            <DollarSign size={16} />
-            ${tournament.entryFee} entry
+            <Banknote size={16} />
+            {tournament.entryFee === 0 ? "Free entry" : `₦${tournament.entryFee.toLocaleString()} entry`}
           </span>
           <span className="flex items-center gap-2">
             <Trophy size={16} />
-            ${tournament.prizePool.toLocaleString()} prize
+            ₦{tournament.prizePool.toLocaleString()} prize
           </span>
         </div>
       </div>

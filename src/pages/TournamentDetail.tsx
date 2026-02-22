@@ -4,7 +4,7 @@ import { tournamentService } from "@/features/tournaments/services/tournament.se
 import { Tournament } from "@/features/tournaments/types";
 import { TeamRegistrationForm } from "@/features/tournaments/components/TeamRegistrationForm";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { ChevronLeft, Calendar, Users, DollarSign, Trophy, MapPin } from "lucide-react";
+import { ChevronLeft, Calendar, Users, Banknote, Trophy, MapPin } from "lucide-react";
 
 const TournamentDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -46,8 +46,8 @@ const TournamentDetail = () => {
               { icon: Calendar, label: "Start Date", value: new Date(tournament.startDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) },
               { icon: Calendar, label: "End Date", value: new Date(tournament.endDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) },
               { icon: Users, label: "Teams", value: `${tournament.registeredTeams} / ${tournament.maxTeams}` },
-              { icon: DollarSign, label: "Entry Fee", value: `$${tournament.entryFee}` },
-              { icon: Trophy, label: "Prize Pool", value: `$${tournament.prizePool.toLocaleString()}` },
+              { icon: Banknote, label: "Entry Fee", value: tournament.entryFee === 0 ? "Free" : `₦${tournament.entryFee.toLocaleString()}` },
+              { icon: Trophy, label: "Prize Pool", value: `₦${tournament.prizePool.toLocaleString()}` },
               { icon: MapPin, label: "Venue", value: tournament.facilityName },
             ].map((item) => (
               <div key={item.label} className="rounded-lg border border-border bg-card p-4 card-shadow">
@@ -94,8 +94,8 @@ const TournamentDetail = () => {
                   {tournament.status === "registration_closed"
                     ? "Registration is closed for this tournament."
                     : tournament.registeredTeams >= tournament.maxTeams
-                    ? "This tournament is full."
-                    : "Registration is not yet open."}
+                      ? "This tournament is full."
+                      : "Registration is not yet open."}
                 </p>
               </div>
             )}
