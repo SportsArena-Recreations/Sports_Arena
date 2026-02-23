@@ -3,7 +3,6 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { FacilityCard } from "@/features/facilities/components/FacilityCard";
 import { facilityService } from "@/features/facilities/services/facility.service";
 import { Facility, FacilityType } from "@/features/facilities/types";
-import { Button } from "@/components/ui/button";
 
 const facilityTypes: { label: string; value: FacilityType | "all" }[] = [
   { label: "All", value: "all" },
@@ -32,16 +31,19 @@ const Facilities = () => {
         description="Browse and book our world-class sports facilities."
       />
 
-      <div className="mb-8 flex flex-wrap gap-2">
+      <div className="mb-8 flex flex-wrap gap-3 items-center justify-start">
+        <span className="text-[10px] uppercase font-bold tracking-widest text-white/30 whitespace-nowrap hidden sm:inline-block mr-2">Facility Type</span>
         {facilityTypes.map((type) => (
-          <Button
+          <button
             key={type.value}
-            variant={filter === type.value ? "default" : "outline"}
-            size="sm"
             onClick={() => setFilter(type.value)}
+            className={`whitespace-nowrap flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all border ${filter === type.value
+              ? "bg-white/10 text-white border-white/15"
+              : "text-white/35 border-transparent hover:text-white/70 hover:border-white/10"
+              }`}
           >
             {type.label}
-          </Button>
+          </button>
         ))}
       </div>
 

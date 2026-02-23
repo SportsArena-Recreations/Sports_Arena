@@ -32,12 +32,13 @@ const Tournaments = () => {
       />
 
       {/* Sports Filter */}
-      <div className="flex overflow-x-auto gap-2 pb-6 mb-2 scrollbar-hide snap-x">
+      <div className="flex flex-wrap items-center justify-start gap-3 pb-6 mb-2">
+        <span className="text-[10px] uppercase font-bold tracking-widest text-white/30 whitespace-nowrap hidden sm:inline-block mr-2">Sport</span>
         <button
           onClick={() => setSelectedSport("all")}
-          className={`snap-start whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all ${selectedSport === "all"
-              ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]"
-              : "bg-white/[0.03] text-white/60 hover:bg-white/[0.08] hover:text-white border border-white/[0.05]"
+          className={`whitespace-nowrap flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all border ${selectedSport === "all"
+            ? "bg-white/10 text-white border-white/15"
+            : "text-white/35 border-transparent hover:text-white/70 hover:border-white/10"
             }`}
         >
           All Sports
@@ -46,9 +47,9 @@ const Tournaments = () => {
           <button
             key={sport.id}
             onClick={() => setSelectedSport(sport.name)}
-            className={`snap-start whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all ${selectedSport === sport.name
-                ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]"
-                : "bg-white/[0.03] text-white/60 hover:bg-white/[0.08] hover:text-white border border-white/[0.05]"
+            className={`whitespace-nowrap flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all border ${selectedSport === sport.name
+              ? "bg-white/10 text-white border-white/15"
+              : "text-white/35 border-transparent hover:text-white/70 hover:border-white/10"
               }`}
           >
             {sport.name}

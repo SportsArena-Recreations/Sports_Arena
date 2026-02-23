@@ -485,34 +485,31 @@ export default function Matches() {
             </section>
 
             {/* Category Filter */}
-            <section className="pt-8 pb-4 px-4 sm:px-6 sticky top-[72px] z-30 bg-[#020202]/90 backdrop-blur-md border-b border-white/[0.05]">
+            <section className="pt-6 pb-4 px-4 sm:px-6 sticky top-[72px] z-30 bg-[#020202]/90 backdrop-blur-md border-b border-white/[0.05]">
                 <div className="container mx-auto max-w-4xl">
-                    <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide snap-x items-center">
-
+                    <div className="flex flex-wrap overflow-x-auto gap-3 pb-2 scrollbar-hide snap-x items-center justify-start lg:justify-center">
                         <span className="text-[10px] uppercase font-bold tracking-widest text-white/30 whitespace-nowrap hidden sm:inline-block">Format</span>
-
                         {filterOptions.map(opt => (
                             <button
                                 key={opt.value}
                                 onClick={() => setFilter(opt.value)}
-                                className={`snap-start whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all ${filter === opt.value
-                                    ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]"
-                                    : "bg-white/[0.03] text-white/60 hover:bg-white/[0.08] hover:text-white border border-white/[0.05]"
+                                className={`snap-start whitespace-nowrap flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all border ${filter === opt.value
+                                    ? "bg-white/10 text-white border-white/15"
+                                    : "text-white/35 border-transparent hover:text-white/70 hover:border-white/10"
                                     }`}
                             >
                                 {opt.label}
                             </button>
                         ))}
 
-                        <div className="w-px h-6 bg-white/[0.1] mx-1 flex-shrink-0" />
+                        <div className="w-px h-5 bg-white/[0.1] mx-1 flex-shrink-0 hidden sm:block" />
 
                         <span className="text-[10px] uppercase font-bold tracking-widest text-white/30 whitespace-nowrap hidden sm:inline-block">Sport</span>
-
                         <button
                             onClick={() => setSelectedSport("all")}
-                            className={`snap-start whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all ${selectedSport === "all"
-                                ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]"
-                                : "bg-white/[0.03] text-white/60 hover:bg-white/[0.08] hover:text-white border border-white/[0.05]"
+                            className={`snap-start whitespace-nowrap flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all border ${selectedSport === "all"
+                                ? "bg-white/10 text-white border-white/15"
+                                : "text-white/35 border-transparent hover:text-white/70 hover:border-white/10"
                                 }`}
                         >
                             All Sports
@@ -521,15 +518,14 @@ export default function Matches() {
                             <button
                                 key={sport.id}
                                 onClick={() => setSelectedSport(sport.name)}
-                                className={`snap-start whitespace-nowrap px-4 py-2 rounded-xl text-sm font-semibold transition-all ${selectedSport === sport.name
-                                    ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.2)]"
-                                    : "bg-white/[0.03] text-white/60 hover:bg-white/[0.08] hover:text-white border border-white/[0.05]"
+                                className={`snap-start whitespace-nowrap flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all border ${selectedSport === sport.name
+                                    ? "bg-white/10 text-white border-white/15"
+                                    : "text-white/35 border-transparent hover:text-white/70 hover:border-white/10"
                                     }`}
                             >
                                 {sport.name}
                             </button>
                         ))}
-
                     </div>
                 </div>
             </section>
