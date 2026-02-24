@@ -160,6 +160,7 @@ export function Navbar() {
             {isAdmin && (
               <Link
                 to="/admin"
+                state={{ from: location.pathname }}
                 className="flex items-center gap-1.5 h-8 px-3 rounded-full border border-white/[0.12] text-white/45 hover:text-white/80 hover:border-white/25 text-xs font-semibold tracking-wide transition-all"
               >
                 <LayoutDashboard size={12} strokeWidth={2.5} />
@@ -269,7 +270,7 @@ export function Navbar() {
                       </div>
                     </div>
                     {isAdmin && (
-                      <Link to="/admin" onClick={() => setMobileOpen(false)}
+                      <Link to="/admin" state={{ from: location.pathname }} onClick={() => setMobileOpen(false)}
                         className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
                       >
                         <LayoutDashboard size={15} />

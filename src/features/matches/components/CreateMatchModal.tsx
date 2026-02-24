@@ -108,6 +108,15 @@ export function CreateMatchModal({ isOpen, onClose, onSave }: CreateMatchModalPr
     const [facilityOptions, setFacilityOptions] = useState<string[]>([]);
     const [sports, setSports] = useState<Sport[]>([]);
 
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 640);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
     useEffect(() => {
         if (isOpen) {
             tournamentService.getAll().then(res => {
@@ -197,20 +206,22 @@ export function CreateMatchModal({ isOpen, onClose, onSave }: CreateMatchModalPr
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+            <div className={`fixed inset-0 z-[100] flex justify-center ${isMobile ? "items-end p-0" : "items-center p-4 sm:p-6"}`}>
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
                     className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                     onClick={onClose}
                 />
 
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                    className="relative w-full max-w-2xl overflow-hidden rounded-2xl bg-[#111115] border border-white/[0.08] shadow-2xl flex flex-col max-h-[90vh]"
+                    initial={isMobile ? { opacity: 0, y: "100%" } : { opacity: 0, scale: 0.95, y: 10 }}
+                    animate={isMobile ? { opacity: 1, y: 0 } : { opacity: 1, scale: 1, y: 0 }}
+                    exit={isMobile ? { opacity: 0, y: "100%" } : { opacity: 0, scale: 0.95, y: 10 }}
+                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                    className={`relative w-full max-w-2xl overflow-hidden bg-[#111115] border border-white/[0.08] shadow-2xl flex flex-col max-h-[90vh] ${isMobile ? "rounded-t-2xl pb-2" : "rounded-2xl"}`}
                 >
                     {/* Header */}
                     <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.08] bg-[#1a1a20]">
