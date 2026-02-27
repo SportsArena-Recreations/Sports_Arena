@@ -1,7 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Trophy, Users, Calendar, Clock, ChevronRight, Swords, CheckCircle2, Timer, Shield, Info } from "lucide-react";
 import { Footer } from "@/components/layout/Footer";
+import { tournamentService } from "@/features/tournaments/services/tournament.service";
+import { facilityService } from "@/features/facilities/services/facility.service";
+import { sportService, Sport } from "@/features/sports/services/sport.service";
+import { matchService } from "@/features/matches/services/match.service";
+import { Match as DBMatch } from "@/features/matches/types";
+import { Tournament } from "@/features/tournaments/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type MatchStatus = "result" | "fixture" | "live";
@@ -26,6 +32,7 @@ interface Match {
 
 interface TournamentMatches {
     id: string;
+    type?: "tournament" | "friendly";
     title: string;
     subtitle: string;
     sport: string;
@@ -39,96 +46,26 @@ interface TournamentMatches {
     matches: Match[];
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const tournaments: TournamentMatches[] = [
-    {
-        id: "spring-basketball",
-        title: "Spring Basketball Championship",
-        subtitle: "5v5 Tournament · Group Stage & Knockouts",
-        sport: "Basketball",
-        icon: Trophy,
-        accentColor: "bg-orange-500/10",
-        accentText: "text-orange-400",
-        accentBorder: "border-orange-500/20",
-        status: "on-going",
-        currentStage: "Quarter-Finals",
-        numberOfTeams: 16,
-        matches: [
-            { id: "sb1", home: { name: "Apex Ballers", shortName: "APX" }, away: { name: "City Hawks", shortName: "CTH" }, date: "2026-02-10", time: "18:00", venue: "Championship Court", status: "result", round: "Group Stage" },
-            { id: "sb2", home: { name: "Northside Kings", shortName: "NSK" }, away: { name: "Riverside Flames", shortName: "RSF" }, date: "2026-02-12", time: "20:00", venue: "Championship Court", status: "result", round: "Group Stage" },
-            { id: "sb3", home: { name: "Apex Ballers", shortName: "APX" }, away: { name: "Riverside Flames", shortName: "RSF" }, date: "2026-02-17", time: "17:30", venue: "Championship Court", status: "result", round: "Group Stage" },
-            // The 3 most recent/current around now (Feb 22, 2026)
-            { id: "sb4", home: { name: "City Hawks", shortName: "CTH" }, away: { name: "West End Bulls", shortName: "WEB" }, date: "2026-02-19", time: "19:00", venue: "Championship Court", status: "result", round: "Quarter-Final" },
-            { id: "sb7", home: { name: "Dunk Masters", shortName: "DM" }, away: { name: "Rim Rockers", shortName: "RR" }, date: "2026-02-22", time: "18:00", venue: "Championship Court", status: "live", round: "Quarter-Final" },
-            { id: "sb5", home: { name: "Apex Ballers", shortName: "APX" }, away: { name: "Northside Kings", shortName: "NSK" }, date: "2026-03-01", time: "18:00", venue: "Championship Court", status: "fixture", round: "Semi-Final" },
-            { id: "sb6", home: { name: "TBD", shortName: "TBD" }, away: { name: "TBD", shortName: "TBD" }, date: "2026-03-08", time: "20:00", venue: "Championship Court", status: "fixture", round: "Final" },
-        ],
-    },
-    {
-        id: "soccer-league",
-        title: "Indoor Soccer League",
-        subtitle: "8-Week Round-Robin League",
-        sport: "Soccer",
-        icon: Shield,
-        accentColor: "bg-emerald-500/10",
-        accentText: "text-emerald-400",
-        accentBorder: "border-emerald-500/20",
-        status: "on-going",
-        currentStage: "Week 4",
-        numberOfTeams: 8,
-        matches: [
-            { id: "sl1", home: { name: "Green Eagles FC", shortName: "GEF" }, away: { name: "Blue Thunder", shortName: "BTH" }, date: "2026-01-28", time: "19:00", venue: "Premier Soccer Pitch", status: "result", round: "Week 1" },
-            { id: "sl2", home: { name: "Red Lions", shortName: "RDL" }, away: { name: "Golden Vipers", shortName: "GDV" }, date: "2026-02-04", time: "18:30", venue: "Premier Soccer Pitch", status: "result", round: "Week 2" },
-            { id: "sl3", home: { name: "Blue Thunder", shortName: "BTH" }, away: { name: "Red Lions", shortName: "RDL" }, date: "2026-02-11", time: "19:30", venue: "Premier Soccer Pitch", status: "result", round: "Week 3" },
-            // Recent / Upcoming
-            { id: "sl4", home: { name: "Golden Vipers", shortName: "GDV" }, away: { name: "Green Eagles FC", shortName: "GEF" }, date: "2026-02-18", time: "20:00", venue: "Premier Soccer Pitch", status: "result", round: "Week 4" },
-            { id: "sl5", home: { name: "Green Eagles FC", shortName: "GEF" }, away: { name: "Red Lions", shortName: "RDL" }, date: "2026-02-25", time: "19:00", venue: "Premier Soccer Pitch", status: "fixture", round: "Week 5" },
-            { id: "sl6", home: { name: "Blue Thunder", shortName: "BTH" }, away: { name: "Golden Vipers", shortName: "GDV" }, date: "2026-03-04", time: "18:30", venue: "Premier Soccer Pitch", status: "fixture", round: "Week 6" },
-            { id: "sl7", home: { name: "Red Lions", shortName: "RDL" }, away: { name: "Green Eagles FC", shortName: "GEF" }, date: "2026-03-11", time: "20:00", venue: "Premier Soccer Pitch", status: "fixture", round: "Week 7" },
-            { id: "sl8", home: { name: "Golden Vipers", shortName: "GDV" }, away: { name: "Blue Thunder", shortName: "BTH" }, date: "2026-03-18", time: "19:00", venue: "Premier Soccer Pitch", status: "fixture", round: "Week 8 (Final Day)" },
-        ],
-    },
-    {
-        id: "tennis-singles",
-        title: "Tennis Singles Open",
-        subtitle: "Bracket-Style Elimination · All Levels",
-        sport: "Tennis",
-        icon: Swords,
-        accentColor: "bg-yellow-500/10",
-        accentText: "text-yellow-400",
-        accentBorder: "border-yellow-500/20",
-        status: "ended",
-        currentStage: "Final",
-        numberOfTeams: 32,
-        matches: [
-            { id: "ts1", home: { name: "A. Okafor", shortName: "AOK" }, away: { name: "M. Bello", shortName: "MBL" }, date: "2026-02-01", time: "10:00", venue: "Ace Tennis Center", status: "result", round: "Round of 32" },
-            { id: "ts2", home: { name: "F. Nwachukwu", shortName: "FNW" }, away: { name: "D. Abdullahi", shortName: "DAB" }, date: "2026-02-01", time: "12:00", venue: "Ace Tennis Center", status: "result", round: "Round of 32" },
-            { id: "ts3", home: { name: "C. Eze", shortName: "CEZ" }, away: { name: "I. Mbenga", shortName: "IMB" }, date: "2026-02-08", time: "11:00", venue: "Ace Tennis Center", status: "result", round: "Round of 16" },
-            // Recent finals matches
-            { id: "ts4", home: { name: "A. Okafor", shortName: "AOK" }, away: { name: "F. Nwachukwu", shortName: "FNW" }, date: "2026-02-15", time: "14:00", venue: "Ace Tennis Center", status: "result", round: "Quarter-Final" },
-            { id: "ts5", home: { name: "A. Okafor", shortName: "AOK" }, away: { name: "C. Eze", shortName: "CEZ" }, date: "2026-02-18", time: "15:00", venue: "Ace Tennis Center", status: "result", round: "Semi-Final" },
-            { id: "ts6", home: { name: "A. Okafor", shortName: "AOK" }, away: { name: "S. Ojo", shortName: "SOJ" }, date: "2026-02-21", time: "16:00", venue: "Ace Tennis Center", status: "result", round: "Final" },
-        ],
-    },
-    {
-        id: "summer-slam",
-        title: "Summer Slam Festival",
-        subtitle: "Mixed Sports Event",
-        sport: "Mixed",
-        icon: Users,
-        accentColor: "bg-blue-500/10",
-        accentText: "text-blue-400",
-        accentBorder: "border-blue-500/20",
-        status: "upcoming",
-        currentStage: "Registration",
-        numberOfTeams: 24,
-        matches: [
-            { id: "ss1", home: { name: "Team Alpha", shortName: "ALP" }, away: { name: "Team Beta", shortName: "BTA" }, date: "2026-06-10", time: "10:00", venue: "Main Arena", status: "fixture", round: "Opening Match" },
-            { id: "ss2", home: { name: "Sunday Warriors", shortName: "SWR" }, away: { name: "Weekend FC", shortName: "WFC" }, date: "2026-06-10", time: "12:00", venue: "Main Arena", status: "fixture", round: "Group Stage" },
-            { id: "ss3", home: { name: "Arena Allstars", shortName: "AAS" }, away: { name: "Challengers XI", shortName: "CHX" }, date: "2026-06-11", time: "14:00", venue: "Main Arena", status: "fixture", round: "Group Stage" },
-        ],
-    }
-];
+// ─── Transformer ─────────────────────────────────────────────────────────────
+// Maps the backend DB matches to the UI format expected by the Matches page
+function mapMatchToUI(m: DBMatch): Match {
+    let uiStatus: MatchStatus = "fixture";
+    if (m.status === "completed") uiStatus = "result";
+    else if (m.status === "in_progress") uiStatus = "live";
+    else if (m.status === "scheduled") uiStatus = "fixture";
+
+    return {
+        id: m.id,
+        home: { name: m.homeTeamName, shortName: m.homeTeamName.substring(0, 3).toUpperCase(), score: m.homeScore },
+        away: { name: m.awayTeamName, shortName: m.awayTeamName.substring(0, 3).toUpperCase(), score: m.awayScore },
+        date: m.date,
+        time: m.time,
+        venue: m.venue || "TBD",
+        status: uiStatus,
+        round: m.round
+    };
+}
+
 
 // ─── Fake scores (deterministic from match id) ─────────────────────────────
 function fakeScore(matchId: string, team: "home" | "away"): number {
@@ -191,7 +128,7 @@ function MatchRow({ match, accent, border, compact = false }: { match: Match; ac
     const awayWon = homeScore !== null && awayScore !== null && awayScore > homeScore;
 
     return (
-        <div className={`rounded-xl border bg-white/[0.02] hover:bg-white/[0.05] transition-colors ${compact ? 'p-3' : 'p-4'} ${border}`}>
+        <div className={`rounded-xl border bg-white/[0.02] hover:bg-white/[0.05] transition-colors ${compact ? 'p-3' : 'p-3 sm:p-4'} ${border}`}>
             {/* Round + date row */}
             <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
                 {match.round && (
@@ -226,14 +163,14 @@ function MatchRow({ match, accent, border, compact = false }: { match: Match; ac
 
                 {/* Score or "vs" */}
                 <div className="flex items-center justify-center gap-2 flex-shrink-0 min-w-[60px] bg-black/30 rounded-lg px-2 py-1">
-                    {homeScore !== null ? (
+                    {homeScore !== null && homeScore !== undefined ? (
                         <>
                             <span className={`text-xl font-black tabular-nums ${homeWon ? "text-white" : "text-white/50"}`}>{homeScore}</span>
-                            <span className="text-white/20 text-xs font-light">—</span>
+                            <span className="text-white/20 font-black">-</span>
                             <span className={`text-xl font-black tabular-nums ${awayWon ? "text-white" : "text-white/50"}`}>{awayScore}</span>
                         </>
                     ) : (
-                        <span className="text-white/20 text-[10px] font-bold tracking-widest px-1">VS</span>
+                        <span className="text-xs font-bold text-white/30 uppercase tracking-widest px-1">vs</span>
                     )}
                 </div>
 
@@ -246,10 +183,12 @@ function MatchRow({ match, accent, border, compact = false }: { match: Match; ac
             </div>
 
             {/* Venue (only if not compact) */}
-            {!compact && (
-                <p className="text-[11px] text-white/25 mt-3 text-center uppercase tracking-widest font-semibold">{match.venue}</p>
-            )}
-        </div>
+            {
+                !compact && (
+                    <p className="text-[11px] text-white/25 mt-3 text-center uppercase tracking-widest font-semibold">{match.venue}</p>
+                )
+            }
+        </div >
     );
 }
 
@@ -275,11 +214,11 @@ function TournamentModal({ tournament, onClose }: { tournament: TournamentMatche
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 40, scale: 0.97 }}
                 transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                className="relative z-10 w-full sm:max-w-2xl max-h-[90dvh] sm:max-h-[85vh] flex flex-col bg-[#08080a] border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl"
+                className="relative z-10 w-full sm:max-w-2xl max-h-[80dvh] sm:max-h-[85vh] flex flex-col bg-[#08080a] border border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl"
             >
                 {/* Modal header */}
-                <div className={`px-6 pt-6 pb-5 border-b border-white/[0.06] flex-shrink-0 ${tournament.accentColor}`}>
-                    <div className="flex items-start justify-between gap-4">
+                <div className={`px-4 pt-5 pb-4 sm:px-6 sm:pt-6 sm:pb-5 border-b border-white/[0.06] flex-shrink-0 ${tournament.accentColor}`}>
+                    <div className="flex items-start justify-between gap-3 sm:gap-4">
                         <div>
                             <div className="flex items-center gap-2 mb-2">
                                 <span className={`text-[10px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full border ${tournament.accentText} ${tournament.accentBorder} bg-black/20`}>
@@ -300,7 +239,7 @@ function TournamentModal({ tournament, onClose }: { tournament: TournamentMatche
                 </div>
 
                 {/* Scrollable body */}
-                <div className="flex-1 overflow-y-auto px-5 py-5 space-y-8">
+                <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5 space-y-6 sm:space-y-8">
                     {results.length > 0 && (
                         <div>
                             <h3 className="text-[10px] font-bold tracking-widest uppercase text-white/40 mb-3 flex items-center gap-2">
@@ -418,11 +357,86 @@ function TournamentCard({ tournament, onClickViewAll }: { tournament: Tournament
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function Matches() {
+    const [tournaments, setTournaments] = useState<TournamentMatches[]>([]);
     const [selected, setSelected] = useState<TournamentMatches | null>(null);
+    const [sports, setSports] = useState<Sport[]>([]);
+    const [selectedSport, setSelectedSport] = useState<string>("all");
+    const [filter, setFilter] = useState<string>("all");
+
+    useEffect(() => {
+        Promise.all([
+            tournamentService.getAll(),
+            matchService.getAll(),
+            sportService.getAll()
+        ]).then(([tRes, mRes, sRes]) => {
+            const dbTournaments = tRes.data || [];
+            const dbMatches = mRes.data || [];
+            setSports(sRes.data || []);
+
+            // 1. Group matches into Tournaments
+            const mappedTournaments: TournamentMatches[] = dbTournaments.map(t => {
+                const tMatches = dbMatches.filter(m => m.tournamentId === t.id);
+                return {
+                    id: t.id,
+                    type: "tournament",
+                    title: t.name,
+                    subtitle: `${t.maxTeams} Teams · ${t.description || t.sport}`,
+                    sport: t.sport,
+                    icon: Trophy,
+                    accentColor: "bg-blue-500/10",
+                    accentText: "text-blue-400",
+                    accentBorder: "border-blue-500/20",
+                    status: ["registration_closed", "registration_open"].includes(t.status) ? "upcoming" : (t.status === "completed" ? "ended" : "on-going"),
+                    currentStage: "Various",
+                    numberOfTeams: t.registeredTeams,
+                    matches: tMatches.map(mapMatchToUI)
+                };
+            });
+
+            // 2. Group friendly matches into a single pseudo-tournament block
+            const friendlyMatches = dbMatches.filter(m => m.type === "friendly");
+            if (friendlyMatches.length > 0) {
+                mappedTournaments.unshift({
+                    id: "friendly-series",
+                    type: "friendly",
+                    title: "Community Friendlies",
+                    subtitle: "One-off exhibition matches & pickup games",
+                    sport: "Mixed",
+                    icon: Users,
+                    accentColor: "bg-purple-500/10",
+                    accentText: "text-purple-400",
+                    accentBorder: "border-purple-500/20",
+                    status: "on-going",
+                    currentStage: "Various",
+                    numberOfTeams: 0,
+                    matches: friendlyMatches.map(mapMatchToUI)
+                });
+            }
+
+            setTournaments(mappedTournaments);
+        });
+    }, []);
 
     const totalPlayed = tournaments.reduce((a, c) => a + c.matches.filter((m) => m.status === "result").length, 0);
     const totalUpcoming = tournaments.reduce((a, c) => a + c.matches.filter((m) => m.status === "fixture").length, 0);
     const liveCount = tournaments.reduce((a, c) => a + c.matches.filter((m) => m.status === "live").length, 0);
+
+    const filterOptions = [
+        { label: "All Formats", value: "all" },
+        { label: "Friendlies", value: "friendly" },
+        ...tournaments.filter(t => t.type !== "friendly").map(t => ({ label: t.title, value: t.id }))
+    ];
+
+    let filteredTournaments = filter === "all"
+        ? tournaments
+        : filter === "friendly"
+            ? tournaments.filter(t => t.type === "friendly")
+            : tournaments.filter(t => t.id === filter);
+
+    // Secondary filter by Sport
+    if (selectedSport !== "all") {
+        filteredTournaments = filteredTournaments.filter(t => t.sport === selectedSport);
+    }
 
     return (
         <div className="bg-[#020202] text-white min-h-screen font-sans">
@@ -470,16 +484,77 @@ export default function Matches() {
                 </div>
             </section>
 
+            {/* Category Filter */}
+            <section className="pt-6 pb-4 px-4 sm:px-6 sticky top-[72px] z-30 bg-[#020202]/90 backdrop-blur-md border-b border-white/[0.05]">
+                <div className="container mx-auto max-w-4xl">
+                    <div className="flex flex-wrap overflow-x-auto gap-3 pb-2 scrollbar-hide snap-x items-center justify-start lg:justify-center">
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-white/30 whitespace-nowrap hidden sm:inline-block">Format</span>
+                        {filterOptions.map(opt => (
+                            <button
+                                key={opt.value}
+                                onClick={() => setFilter(opt.value)}
+                                className={`snap-start whitespace-nowrap flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all border ${filter === opt.value
+                                    ? "bg-white/10 text-white border-white/15"
+                                    : "text-white/35 border-transparent hover:text-white/70 hover:border-white/10"
+                                    }`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+
+                        <div className="w-px h-5 bg-white/[0.1] mx-1 flex-shrink-0 hidden sm:block" />
+
+                        <span className="text-[10px] uppercase font-bold tracking-widest text-white/30 whitespace-nowrap hidden sm:inline-block">Sport</span>
+                        <button
+                            onClick={() => setSelectedSport("all")}
+                            className={`snap-start whitespace-nowrap flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all border ${selectedSport === "all"
+                                ? "bg-white/10 text-white border-white/15"
+                                : "text-white/35 border-transparent hover:text-white/70 hover:border-white/10"
+                                }`}
+                        >
+                            All Sports
+                        </button>
+                        {sports.map(sport => (
+                            <button
+                                key={sport.id}
+                                onClick={() => setSelectedSport(sport.name)}
+                                className={`snap-start whitespace-nowrap flex-shrink-0 px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all border ${selectedSport === sport.name
+                                    ? "bg-white/10 text-white border-white/15"
+                                    : "text-white/35 border-transparent hover:text-white/70 hover:border-white/10"
+                                    }`}
+                            >
+                                {sport.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
             {/* Tournaments Vertical Stack */}
-            <section className="py-16 px-4 sm:px-6">
+            <section className="py-12 px-4 sm:px-6">
                 <div className="container mx-auto max-w-4xl flex flex-col gap-10">
-                    {tournaments.map((t, i) => (
-                        <TournamentCard
-                            key={t.id}
-                            tournament={t}
-                            onClickViewAll={() => setSelected(t)}
-                        />
-                    ))}
+                    <AnimatePresence mode="popLayout">
+                        {filteredTournaments.map((t, i) => (
+                            <motion.div
+                                key={t.id}
+                                layout
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                            >
+                                <TournamentCard
+                                    tournament={t}
+                                    onClickViewAll={() => setSelected(t)}
+                                />
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+                    {filteredTournaments.length === 0 && (
+                        <div className="text-center py-20 text-white/40">
+                            No matches or tournaments found for this category.
+                        </div>
+                    )}
                 </div>
             </section>
 

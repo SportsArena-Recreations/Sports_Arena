@@ -4,6 +4,7 @@ export interface Team {
   sport: string;
   captainId: string;
   captainName: string;
+  phone?: string;
   members: TeamMember[];
   createdAt: string;
   logoUrl?: string;

@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { tournamentService } from "@/features/tournaments/services/tournament.service";
 import { facilityService } from "@/features/facilities/services/facility.service";
+import { sportService, Sport } from "@/features/sports/services/sport.service";
 import { Tournament, TournamentStatus } from "@/features/tournaments/types";
 import { Facility } from "@/features/facilities/types";
 import { supabase } from "@/lib/supabase";
@@ -30,7 +31,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 const EMPTY_FORM: Omit<Tournament, "id"> = {
   name: "", sport: "Soccer", description: "",
-  startDate: "", endDate: "", registrationDeadline: "",
+  startDate: "", endDate: "", startTime: "", endTime: "", registrationDeadline: "",
   maxTeams: 8, registeredTeams: 0, entryFee: 0, prizePool: 0,
   status: "upcoming", rules: [], facilityId: "", facilityName: "",
   imageUrl: "",
@@ -97,6 +98,11 @@ function TournamentModal({ editing, facilities, onClose, onSaved }: ModalProps) 
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [sports, setSports] = useState<Sport[]>([]);
+
+  useEffect(() => {
+    sportService.getAll().then(res => setSports(res.data));
+  }, []);
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -286,13 +292,20 @@ function TournamentModal({ editing, facilities, onClose, onSaved }: ModalProps) 
                 <label className="text-xs font-semibold text-white/55">
                   Sport <span className="text-red-400">*</span>
                 </label>
-                <input
-                  className={inputCls}
-                  placeholder="e.g. Soccer, Basketball"
-                  value={form.sport}
-                  onChange={(e) => set("sport", e.target.value)}
-                  required
-                />
+                <div className="relative">
+                  <select
+                    className={`${inputCls} appearance-none pr-9 cursor-pointer`}
+                    value={form.sport}
+                    onChange={(e) => set("sport", e.target.value)}
+                    required
+                  >
+                    <option value="" className="bg-[#0d0d11]" disabled>Select Sport</option>
+                    {sports.map(s => (
+                      <option key={s.id} value={s.name} className="bg-[#0d0d11]">{s.name}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={13} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+                </div>
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-white/55">
@@ -351,6 +364,25 @@ function TournamentModal({ editing, facilities, onClose, onSaved }: ModalProps) 
                   value={form.endDate}
                   onChange={(e) => set("endDate", e.target.value)}
                   required
+                />
+              </div>
+              {/* Daily time window */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-white/55">Daily Start Time</label>
+                <input
+                  type="time"
+                  className={inputCls + " [&::-webkit-calendar-picker-indicator]:invert-[1] [&::-webkit-calendar-picker-indicator]:opacity-50"}
+                  value={form.startTime ?? ""}
+                  onChange={(e) => set("startTime", e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-white/55">Daily End Time</label>
+                <input
+                  type="time"
+                  className={inputCls + " [&::-webkit-calendar-picker-indicator]:invert-[1] [&::-webkit-calendar-picker-indicator]:opacity-50"}
+                  value={form.endTime ?? ""}
+                  onChange={(e) => set("endTime", e.target.value)}
                 />
               </div>
               <div className="space-y-1.5">

@@ -10,6 +10,8 @@ const navLinks = [
   { label: "Facilities", path: "/facilities" },
   { label: "Tournaments", path: "/tournaments" },
   { label: "Matches", path: "/matches" },
+  { label: "Bookings", path: "/bookings" },
+  { label: "Community", path: "/community" },
 ];
 
 /** Derive up-to-2-letter initials from a display name */
@@ -120,7 +122,7 @@ export function Navbar() {
           : "bg-transparent border-b border-transparent"
           }`}
       >
-        <div className="container mx-auto flex h-[72px] items-center justify-between px-6 max-w-7xl">
+        <div className="container mx-auto flex h-[72px] items-center justify-between px-4 max-w-7xl">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group flex-shrink-0">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 border border-white/20 group-hover:border-white/40 transition-all duration-300">
@@ -132,12 +134,12 @@ export function Navbar() {
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-0.5">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
-                className={`relative px-4 py-2 text-sm font-medium tracking-wide transition-colors rounded-full ${location.pathname === link.path ? "text-white" : "text-white/50 hover:text-white/90"
+                className={`relative px-3 py-1.5 text-sm font-medium tracking-wide transition-colors rounded-full whitespace-nowrap ${location.pathname === link.path ? "text-white" : "text-white/50 hover:text-white/90"
                   }`}
               >
                 {location.pathname === link.path && (
@@ -158,6 +160,7 @@ export function Navbar() {
             {isAdmin && (
               <Link
                 to="/admin"
+                state={{ from: location.pathname }}
                 className="flex items-center gap-1.5 h-8 px-3 rounded-full border border-white/[0.12] text-white/45 hover:text-white/80 hover:border-white/25 text-xs font-semibold tracking-wide transition-all"
               >
                 <LayoutDashboard size={12} strokeWidth={2.5} />
@@ -267,7 +270,7 @@ export function Navbar() {
                       </div>
                     </div>
                     {isAdmin && (
-                      <Link to="/admin" onClick={() => setMobileOpen(false)}
+                      <Link to="/admin" state={{ from: location.pathname }} onClick={() => setMobileOpen(false)}
                         className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors"
                       >
                         <LayoutDashboard size={15} />

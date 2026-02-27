@@ -20,18 +20,21 @@ function mapRow(row: Record<string, unknown>): Tournament {
     id: row.id as string,
     name: row.name as string,
     sport: row.sport as string,
-    description: row.description as string,
+    description: (row.description as string) ?? "",
     startDate: row.start_date as string,
     endDate: row.end_date as string,
+    // These columns may not exist yet if the migration hasn't been run
+    startTime: row.start_time ? (row.start_time as string) : undefined,
+    endTime: row.end_time ? (row.end_time as string) : undefined,
     registrationDeadline: row.registration_deadline as string,
     maxTeams: row.max_teams as number,
-    registeredTeams: row.registered_teams as number,
+    registeredTeams: (row.registered_teams as number) ?? 0,
     entryFee: row.entry_fee as number,
     prizePool: row.prize_pool as number,
     status: row.status as Tournament["status"],
     rules: (row.rules as string[]) ?? [],
-    facilityId: row.facility_id as string,
-    facilityName: row.facility_name as string,
+    facilityId: (row.facility_id as string) ?? "",
+    facilityName: (row.facility_name as string) ?? "",
     imageUrl: (row.image_url as string) ?? "",
   };
 }
@@ -65,6 +68,8 @@ export const tournamentService = {
         description: payload.description,
         start_date: payload.startDate,
         end_date: payload.endDate,
+        start_time: payload.startTime || null,
+        end_time: payload.endTime || null,
         registration_deadline: payload.registrationDeadline,
         max_teams: payload.maxTeams,
         registered_teams: payload.registeredTeams,
@@ -89,6 +94,8 @@ export const tournamentService = {
     if (payload.description !== undefined) patch.description = payload.description;
     if (payload.startDate !== undefined) patch.start_date = payload.startDate;
     if (payload.endDate !== undefined) patch.end_date = payload.endDate;
+    if (payload.startTime !== undefined) patch.start_time = payload.startTime || null;
+    if (payload.endTime !== undefined) patch.end_time = payload.endTime || null;
     if (payload.registrationDeadline !== undefined) patch.registration_deadline = payload.registrationDeadline;
     if (payload.maxTeams !== undefined) patch.max_teams = payload.maxTeams;
     if (payload.registeredTeams !== undefined) patch.registered_teams = payload.registeredTeams;
@@ -115,6 +122,42 @@ export const tournamentService = {
     if (error) return createServiceResponse(null, error.message);
     return createServiceResponse(null);
   },
+
+  /** Get tournaments for a specific facility (for calendar markers).
+   * Fetches all non-cancelled tournaments and filters client-side — the
+   * most reliable approach since PostgREST OR filters break on names with spaces. */
+  async getByFacility(facilityId: string, facilityName?: string): Promise<ServiceResponse<Tournament[]>> {
+    try {
+      const { data, error } = await supabase
+        .from("tournaments")
+        .select("*")
+        .neq("status", "cancelled");
+
+      if (error) {
+        console.error("[TournamentService] getByFacility error:", error.message);
+        return createServiceResponse([], error.message);
+      }
+
+      const all = (data ?? []).map((row) => {
+        try { return mapRow(row); }
+        catch (e) { console.error("[TournamentService] mapRow error:", e); return null; }
+      }).filter(Boolean) as Tournament[];
+
+      // Filter client-side: match either facility UUID or facility name
+      const matched = all.filter((t) => {
+        if (facilityId && t.facilityId === facilityId) return true;
+        if (facilityName && t.facilityName?.toLowerCase().trim() === facilityName.toLowerCase().trim()) return true;
+        return false;
+      });
+
+      console.log(`[TournamentService] getByFacility → ${matched.length}/${all.length} match for "${facilityName}"`, matched.map(t => t.name));
+      return createServiceResponse(matched);
+    } catch (e) {
+      console.error("[TournamentService] getByFacility unexpected error:", e);
+      return createServiceResponse([], String(e));
+    }
+  },
+
 
   async registerTeam(registration: TeamRegistration): Promise<ServiceResponse<TeamRegistration>> {
     const { data, error } = await supabase

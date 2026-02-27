@@ -3,13 +3,14 @@ import { useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { facilityService } from "@/features/facilities/services/facility.service";
 import { bookingService } from "@/features/bookings/services/booking.service";
+import { tournamentService } from "@/features/tournaments/services/tournament.service";
 import { Facility } from "@/features/facilities/types";
-import { Booking } from "@/features/bookings/types";
+import { Tournament } from "@/features/tournaments/types";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useAuth } from "@/context/AuthContext";
 import {
   ChevronLeft, ChevronRight, Users, Banknote, Clock, CheckCircle2,
-  Loader2, CalendarDays, AlertTriangle, ShieldOff, X,
+  Loader2, CalendarDays, AlertTriangle, ShieldOff, X, Trophy,
 } from "lucide-react";
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -48,6 +49,17 @@ const fmt = (n: number) => "₦" + n.toLocaleString("en-NG", { minimumFractionDi
 const fmtDate = (d: string) =>
   new Date(d + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
+/** Format a time like "09:00" to "9:00 AM" */
+function fmtTime(t: string) {
+  if (!t) return "";
+  const [hStr, mStr] = t.split(":");
+  let h = parseInt(hStr, 10);
+  const m = mStr ?? "00";
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${h}:${m} ${ampm}`;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const FacilityDetail = () => {
@@ -58,11 +70,14 @@ const FacilityDetail = () => {
   const [loadingFacility, setLoadingFacility] = useState(true);
   const [imgError, setImgError] = useState(false);
 
-  // Date + slot selection
+  // Date + slot selection — now multiple slots
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [bookedSlots, setBookedSlots] = useState<{ startTime: string; endTime: string }[]>([]);
   const [myBookings, setMyBookings] = useState<import("@/features/bookings/types").Booking[]>([]);
+
+  // Tournaments at this facility (for calendar markers)
+  const [facilityTournaments, setFacilityTournaments] = useState<Tournament[]>([]);
 
   // Booking form
   const [form, setForm] = useState({ name: fullName ?? "", email: user?.email ?? "", phone: "", notes: "" });
@@ -122,10 +137,22 @@ const FacilityDetail = () => {
     if (!id) return;
     setLoadingFacility(true);
     facilityService.getById(id).then((res) => {
-      if (res.data) setFacility(res.data);
+      if (res.data) {
+        const fac = res.data;
+        setFacility(fac);
+        // Use getAll (proven to work) and filter client-side by id or name
+        tournamentService.getAll().then((tRes) => {
+          const matched = tRes.data.filter((t) =>
+            (t.facilityId && t.facilityId === id) ||
+            (t.facilityName && fac.name &&
+              t.facilityName.toLowerCase().trim() === fac.name.toLowerCase().trim())
+          );
+          console.log("[FacilityDetail] tournaments for this facility:", matched.length, matched.map(t => t.name));
+          setFacilityTournaments(matched);
+        });
+      }
       setLoadingFacility(false);
     });
-    // Load this user's existing bookings for this facility
     if (session) {
       bookingService.getMineForFacility(id).then((res) => setMyBookings(res.data));
     }
@@ -141,7 +168,7 @@ const FacilityDetail = () => {
     if (!id) return;
     bookingService.getBookedSlots(id, selectedDate).then((res) => {
       setBookedSlots(res.data);
-      setSelectedSlot(null);
+      setSelectedSlots([]);
     });
   }, [id, selectedDate]);
 
@@ -154,47 +181,46 @@ const FacilityDetail = () => {
     }));
   }, [fullName, user]);
 
-  const handleBook = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!facility || !selectedSlot || !user || !session) return;
+  /** Toggle a slot on/off in the multi-selection */
+  const toggleSlot = (start: string) => {
+    setSelectedSlots((prev) =>
+      prev.includes(start) ? prev.filter((s) => s !== start) : [...prev, start]
+    );
+  };
+
+  const handleBook = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!facility || selectedSlots.length === 0 || !user || !session) return;
     if (!form.name.trim() || !form.email.trim()) { setBookError("Name and email are required."); return; }
 
     setBooking(true);
     setBookError(null);
 
-    // Check for conflicts first
-    const conflictRes = await bookingService.getMyConflicts(selectedDate, facility.id, [selectedSlot]);
-    if (conflictRes.success && conflictRes.data && conflictRes.data.length > 0) {
-      setConflictBookings(conflictRes.data);
-      setShowConflictModal(true);
-      setBooking(false);
-      return;
-    }
+    // Sort slots so they're submitted in order
+    const sortedSlots = [...selectedSlots].sort();
 
-    await executeBooking();
-  };
-
-  const executeBooking = async () => {
-    setBooking(true);
-    setShowConflictModal(false);
-
-    if (!facility || !selectedSlot || !user) return;
-
-    const res = await bookingService.create({
-      facilityId: facility.id,
-      userId: user.id,
-      userName: form.name,
-      userEmail: form.email,
-      userPhone: form.phone,
-      date: selectedDate,
-      startTime: selectedSlot,
-      endTime: `${String(parseInt(selectedSlot) + 1).padStart(2, "0")}:00`,
-      totalPrice: facility.pricePerHour,
-      notes: form.notes || undefined,
-    });
+    // Create a booking for each selected slot
+    const results = await Promise.all(
+      sortedSlots.map((slot) =>
+        bookingService.create({
+          facilityId: facility.id,
+          userId: user.id,
+          userName: form.name,
+          userEmail: form.email,
+          userPhone: form.phone,
+          date: selectedDate,
+          startTime: slot,
+          endTime: `${String(parseInt(slot) + 1).padStart(2, "0")}:00`,
+          totalPrice: facility.pricePerHour,
+          notes: form.notes || undefined,
+        })
+      )
+    );
 
     setBooking(false);
-    if (!res.success) { setBookError(res.message ?? "Booking failed. Please try again."); return; }
+    const failed = results.find((r) => !r.success);
+    if (failed) { setBookError(failed.message ?? "Some bookings failed. Please try again."); return; }
+
     // Refresh both booked slots and user's bookings, plus month indicator
     bookingService.getBookedSlots(facility.id, selectedDate).then((r) => setBookedSlots(r.data));
     bookingService.getMineForFacility(facility.id).then((r) => setMyBookings(r.data));
@@ -247,55 +273,28 @@ const FacilityDetail = () => {
   const isSlotMyBooking = (start: string) =>
     myBookings.some((b) => b.date === selectedDate && b.startTime.slice(0, 5) === start);
 
-  // Helper to check if a specific time slot has already passed based on the current local time
-  const isSlotPast = (start: string) => {
-    const now = new Date();
-    // Compare selected date with today's date
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const selectedDateObj = new Date(selectedDate);
-    selectedDateObj.setHours(0, 0, 0, 0);
+  // Helper: get tournaments happening on a given date
+  const getTournamentsOnDate = (isoDate: string) =>
+    facilityTournaments.filter((t) => t.startDate <= isoDate && t.endDate >= isoDate);
 
-    // If selected date is in the past, all slots are past
-    if (selectedDateObj < today) return true;
-
-    // If selected date is today, check if the slot time has passed
-    if (selectedDateObj.getTime() === today.getTime()) {
-      const currentHour = now.getHours();
-      const currentMinutes = now.getMinutes();
-      const [slotHour, slotMinutes] = start.split(':').map(Number);
-
-      return slotHour < currentHour || (slotHour === currentHour && slotMinutes <= currentMinutes);
-    }
-
-    // If selected date is in the future, no slots have passed
-    return false;
+  /** Returns which tournaments occupy a specific time slot on the selected date */
+  const getTournamentsOnSlot = (start: string): Tournament[] => {
+    return getTournamentsOnDate(selectedDate).filter((t) => {
+      if (!t.startTime || !t.endTime) return false;
+      // slot start hour (e.g. "09:00" → 9)
+      const slotH = parseInt(start, 10);
+      const tStartH = parseInt(t.startTime, 10);
+      const tEndH = parseInt(t.endTime, 10);
+      return slotH >= tStartH && slotH < tEndH;
+    });
   };
 
-  const getLiveSessionEndTime = (booking: Booking) => {
-    if (booking.status !== "confirmed") return null;
-    const now = new Date();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const bookingDate = new Date(booking.date + "T00:00:00");
-    if (bookingDate.getTime() !== today.getTime()) return null;
+  const isSlotSelected = (start: string) => selectedSlots.includes(start);
 
-    const startHour = parseInt(booking.startTime.split(':')[0], 10);
-    const endHour = parseInt(booking.endTime.split(':')[0], 10);
-    const currentHour = now.getHours();
+  // Compute total price for selected slots
+  const totalPrice = selectedSlots.length * facility.pricePerHour;
 
-    // Check if this specific booking is live
-    if (currentHour >= startHour && currentHour < endHour) {
-      return booking.endTime.slice(0, 5);
-    }
-    return null;
-  };
 
-  const sortedMyBookings = [...myBookings].sort((a, b) => {
-    const timeA = new Date(`${a.date}T${a.startTime}`).getTime();
-    const timeB = new Date(`${b.date}T${b.startTime}`).getTime();
-    return timeA - timeB;
-  });
 
   return (
     <div className="min-h-screen bg-[#080809]">
@@ -432,7 +431,7 @@ const FacilityDetail = () => {
                   <button
                     onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
                     className="p-1.5 hover:bg-white/[0.06] rounded-lg text-white/40 hover:text-white transition-all disabled:opacity-30"
-                    disabled={currentMonth <= new Date(new Date().getFullYear(), new Date().getMonth(), 1)} // Prevent going into past months
+                    disabled={currentMonth <= new Date(new Date().getFullYear(), new Date().getMonth(), 1)}
                   >
                     <ChevronLeft size={14} />
                   </button>
@@ -470,6 +469,8 @@ const FacilityDetail = () => {
                     const isPast = d.date < today;
                     const isBooked = monthBookedDates.includes(isoDate);
                     const isMyBookingDate = myBookings.some((b) => b.date === isoDate);
+                    const tournamentsOnDay = getTournamentsOnDate(isoDate);
+                    const hasTournament = tournamentsOnDay.length > 0;
 
                     return (
                       <button
@@ -481,6 +482,7 @@ const FacilityDetail = () => {
                             setCurrentMonth(new Date(d.date.getFullYear(), d.date.getMonth(), 1));
                           }
                         }}
+                        title={hasTournament ? tournamentsOnDay.map(t => `🏆 ${t.name}`).join("\n") : undefined}
                         className={`
                           relative flex flex-col items-center justify-center py-2 md:py-2.5 rounded-lg text-xs md:text-sm transition-all
                           ${isSelected
@@ -494,75 +496,132 @@ const FacilityDetail = () => {
                         `}
                       >
                         <span className="relative z-10">{d.date.getDate()}</span>
-                        {/* Booked indicator dot */}
-                        {(isBooked || isMyBookingDate) && !isPast && (() => {
-                          const isLiveDate = myBookings.some(b => b.date === isoDate && getLiveSessionEndTime(b) !== null);
-                          return (
-                            <span className={`absolute bottom-0.5 md:bottom-1 h-1 w-1 rounded-full ${isSelected
-                              ? "bg-black"
-                              : isMyBookingDate
-                                ? isLiveDate ? "bg-green-400" : "bg-sky-400"
-                                : "bg-white/40"
-                              }`} />
-                          );
-                        })()}
+                        {/* Indicator dots — bookings only for non-past, tournaments always */}
+                        {((!isPast && (isBooked || isMyBookingDate)) || hasTournament) && (
+                          <span className="flex gap-0.5 absolute bottom-0.5 md:bottom-1">
+                            {!isPast && (isBooked || isMyBookingDate) && (
+                              <span className={`h-1 w-1 rounded-full ${isSelected ? "bg-black" : isMyBookingDate ? "bg-green-400" : "bg-white/40"}`} />
+                            )}
+                            {hasTournament && (
+                              <span className={`h-1 w-1 rounded-full ${isSelected ? "bg-black" : "bg-purple-400"}`} />
+                            )}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
                 </div>
+
+                {/* Calendar legend */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 pt-3 border-t border-white/[0.04]">
+                  <span className="flex items-center gap-1.5 text-[10px] text-white/25">
+                    <span className="h-1.5 w-1.5 rounded-full bg-green-400" /> Your booking
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[10px] text-white/25">
+                    <span className="h-1.5 w-1.5 rounded-full bg-white/40" /> Booked
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[10px] text-white/25">
+                    <span className="h-1.5 w-1.5 rounded-full bg-purple-400" /> Tournament
+                  </span>
+                </div>
               </div>
+
+              {/* Tournament info for selected date */}
+              {getTournamentsOnDate(selectedDate).length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {getTournamentsOnDate(selectedDate).map((t) => (
+                    <motion.div
+                      key={t.id}
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl bg-purple-500/[0.07] border border-purple-500/[0.15]"
+                    >
+                      <Trophy size={14} className="text-purple-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-white truncate">{t.name}</p>
+                        <p className="text-[11px] text-white/40 mt-0.5">
+                          {t.sport}
+                          {t.startTime && t.endTime
+                            ? ` · ${fmtTime(t.startTime)} – ${fmtTime(t.endTime)}`
+                            : t.startTime
+                              ? ` · From ${fmtTime(t.startTime)}`
+                              : ""}
+                          {" · "}
+                          <span className="capitalize">{t.status.replace("_", " ")}</span>
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full whitespace-nowrap">
+                        Tournament
+                      </span>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Time slots */}
+            {/* Time slots — multi-select */}
             <div className="mb-2">
-              <p className="text-[10px] font-bold tracking-widest uppercase text-white/20 mb-3 flex items-center gap-2">
-                <Clock size={11} /> Available Slots
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[10px] font-bold tracking-widest uppercase text-white/20 flex items-center gap-2">
+                  <Clock size={11} /> Available Slots
+                </p>
+                {selectedSlots.length > 0 && (
+                  <button
+                    onClick={() => setSelectedSlots([])}
+                    className="text-[10px] text-white/30 hover:text-white/60 flex items-center gap-1 transition-colors"
+                  >
+                    <X size={10} /> Clear ({selectedSlots.length} selected)
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-white/25 mb-3">
+                Tap multiple slots to book them all at once.
               </p>
               <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
                 {slots.map((slot) => {
                   const isPastSlot = isSlotPast(slot.start);
                   const isBooked = isSlotBooked(slot.start);
                   const isMine = isSlotMyBooking(slot.start);
-                  const isSelected = selectedSlot === slot.start;
-                  const isSlotLive = isMine && myBookings.some(b => b.date === selectedDate && b.startTime.slice(0, 5) === slot.start && getLiveSessionEndTime(b) !== null);
+                  const isSelected = isSlotSelected(slot.start);
+                  const tournamentSlots = getTournamentsOnSlot(slot.start);
+                  const isTournamentSlot = tournamentSlots.length > 0;
 
                   return (
                     <button
                       key={slot.id}
-                      disabled={isBooked || isPastSlot || facility.status !== "available"}
-                      onClick={() => setSelectedSlot(isSelected ? null : slot.start)}
+                      disabled={isBooked || isTournamentSlot || facility.status !== "available"}
+                      onClick={() => toggleSlot(slot.start)}
+                      title={isTournamentSlot ? `🏆 ${tournamentSlots.map(t => t.name).join(", ")}` : undefined}
                       className={`flex flex-col items-center py-2.5 px-1 rounded-xl border text-center transition-all ${isSelected
-                        ? "bg-white border-white text-black"
-                        : isBooked
-                          ? isMine
-                            ? isSlotLive
+                        ? "bg-white border-white text-black ring-2 ring-white/30"
+                        : isTournamentSlot
+                          ? "bg-purple-500/[0.08] border-purple-500/20 text-purple-400 cursor-not-allowed"
+                          : isBooked
+                            ? isMine
                               ? "bg-green-500/[0.08] border-green-500/20 text-green-400 cursor-not-allowed"
-                              : "bg-sky-500/[0.08] border-sky-500/20 text-sky-400 cursor-not-allowed"
-                            : "bg-white/[0.02] border-white/[0.04] text-white/15 cursor-not-allowed line-through"
-                          : isPastSlot
-                            ? "bg-white/[0.01] border-white/[0.02] text-white/10 cursor-not-allowed line-through"
+                              : "bg-white/[0.02] border-white/[0.04] text-white/15 cursor-not-allowed line-through"
                             : "bg-white/[0.04] border-white/[0.08] text-white/60 hover:border-white/25 hover:text-white cursor-pointer"
                         }`}
                     >
                       <span className="text-xs font-bold">{slot.start}</span>
-                      <span className="text-[10px] opacity-60 mt-0.5">
-                        {isBooked ? (
-                          isMine ? (
-                            isSlotLive ? (
-                              <span className="flex items-center gap-1 justify-center">
-                                <span className="relative flex h-1.5 w-1.5">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
-                                </span>
-                                Live
-                              </span>
-                            ) : "Yours"
-                          ) : "Taken"
-                        ) : isPastSlot ? "Passed" : fmt(slot.price)}
+                      <span className="text-[10px] opacity-75 mt-0.5">
+                        {isTournamentSlot ? "🏆" : isBooked ? (isMine ? "Yours" : "Taken") : fmt(slot.price)}
                       </span>
                     </button>
                   );
                 })}
+              </div>
+              {/* Slots legend */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 pt-3 border-t border-white/[0.04]">
+                <span className="flex items-center gap-1.5 text-[10px] text-white/25">
+                  <span className="h-1.5 w-1.5 rounded-full bg-white/40" /> Available
+                </span>
+                <span className="flex items-center gap-1.5 text-[10px] text-white/25">
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-400" /> Your booking
+                </span>
+                <span className="flex items-center gap-1.5 text-[10px] text-white/25">
+                  <span className="h-1.5 w-1.5 rounded-full bg-purple-400" /> 🏆 Tournament
+                </span>
               </div>
             </div>
           </div>
@@ -769,17 +828,38 @@ const FacilityDetail = () => {
                   <div className="px-6 py-5 border-b border-white/[0.06]">
                     <h2 className="text-base font-bold text-white">Book This Facility</h2>
                     <p className="text-xs text-white/35 mt-0.5">
-                      {selectedSlot
-                        ? `${fmtDate(selectedDate)} · ${selectedSlot}–${String(parseInt(selectedSlot) + 1).padStart(2, "0")}:00`
-                        : "Select a time slot to continue"}
+                      {selectedSlots.length > 0
+                        ? `${fmtDate(selectedDate)} · ${selectedSlots.length} slot${selectedSlots.length > 1 ? "s" : ""} selected`
+                        : "Select one or more time slots to continue"}
                     </p>
                   </div>
 
-                  {/* Price summary */}
-                  {selectedSlot && (
-                    <div className="flex items-center justify-between px-6 py-3 bg-white/[0.02] border-b border-white/[0.05]">
-                      <span className="text-xs text-white/40">Total</span>
-                      <span className="text-lg font-bold text-white">{fmt(facility.pricePerHour)}</span>
+                  {/* Selected slots summary */}
+                  {selectedSlots.length > 0 && (
+                    <div className="px-6 py-3 bg-white/[0.02] border-b border-white/[0.05] space-y-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        {[...selectedSlots].sort().map((slot) => (
+                          <span
+                            key={slot}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 border border-white/10 text-xs font-semibold text-white"
+                          >
+                            {slot}–{String(parseInt(slot) + 1).padStart(2, "0")}:00
+                            <button
+                              type="button"
+                              onClick={() => toggleSlot(slot)}
+                              className="text-white/40 hover:text-white ml-0.5 transition-colors"
+                            >
+                              <X size={10} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-white/40">
+                          {selectedSlots.length} × {fmt(facility.pricePerHour)}
+                        </span>
+                        <span className="text-lg font-bold text-white">{fmt(totalPrice)}</span>
+                      </div>
                     </div>
                   )}
 
@@ -835,21 +915,21 @@ const FacilityDetail = () => {
 
                     <button
                       type="submit"
-                      disabled={!selectedSlot || booking || facility.status !== "available"}
+                      disabled={selectedSlots.length === 0 || booking || facility.status !== "available"}
                       className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-white text-black text-sm font-bold hover:bg-white/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {booking && <Loader2 size={14} className="animate-spin" />}
                       {facility.status !== "available"
                         ? "Facility unavailable"
-                        : !selectedSlot
+                        : selectedSlots.length === 0
                           ? "Select a time slot"
                           : booking
                             ? "Confirming…"
-                            : `Book for ${fmt(facility.pricePerHour)}`
+                            : `Book ${selectedSlots.length} slot${selectedSlots.length > 1 ? "s" : ""} · ${fmt(totalPrice)}`
                       }
                     </button>
 
-                    {!selectedSlot && (
+                    {selectedSlots.length === 0 && (
                       <p className="text-center text-[11px] text-white/25">
                         ↑ Pick a date and time slot above
                       </p>

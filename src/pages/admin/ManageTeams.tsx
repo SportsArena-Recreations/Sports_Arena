@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
 import {
   Search, ChevronDown, Loader2, CalendarDays,
-  CheckCircle2, Clock, Users, Trophy, Mail, Phone
+  CheckCircle2, Clock, Users, Trophy, Mail, Phone, Plus
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { tournamentService, TeamRegistration } from "@/features/tournaments/services/tournament.service";
+import { teamService } from "@/features/teams/services/team.service";
+import { Team } from "@/features/teams/types";
+import { Tournament } from "@/features/tournaments/types";
+import { CreateTeamModal } from "@/features/teams/components/CreateTeamModal";
+import { RegisterToTournamentModal } from "@/features/teams/components/RegisterToTournamentModal";
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -99,24 +104,72 @@ function StatusMenu({
   );
 }
 
-// ─── ManageTeams (Registrations) ──────────────────────────────────────────
+// ─── ManageTeams (Registrations & Standalone) ───────────────────────────
 
 const ManageTeams = () => {
+  const [activeTab, setActiveTab] = useState<"registrations" | "standalone">("registrations");
+
+  // Tournament Registrations State
   const [registrations, setRegistrations] = useState<DisplayRegistration[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingRegs, setLoadingRegs] = useState(true);
+
+  // Standalone Teams State
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(true);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [registeringTeam, setRegisteringTeam] = useState<Team | null>(null);
+
+  // Tournaments
+  const [tournaments, setTournaments] = useState<Tournament[]>([]);
+
+  // Filters
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const load = async () => {
-    setLoading(true);
-    const res = await tournamentService.getAllRegistrations();
-    setRegistrations(res.data);
-    setLoading(false);
+  const loadData = async () => {
+    setLoadingRegs(true);
+    setLoadingTeams(true);
+
+    const [regRes, teamsRes, tournRes] = await Promise.all([
+      tournamentService.getAllRegistrations(),
+      teamService.getAll(),
+      tournamentService.getAll()
+    ]);
+
+    setRegistrations(regRes.data || []);
+    setLoadingRegs(false);
+
+    setTeams(teamsRes.data || []);
+    setLoadingTeams(false);
+
+    setTournaments(tournRes.data || []);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadData(); }, []);
 
-  const filtered = registrations.filter((r) => {
+  const handleCreateTeam = async (data: { name: string; sport: string; captainName: string; captainPhone: string }) => {
+    const res = await teamService.create(data);
+    if (res.success && res.data) {
+      setTeams([res.data, ...teams]);
+    }
+    setIsCreateModalOpen(false);
+  };
+
+  const handleRegisterTeam = async (data: {
+    tournamentId: string;
+    teamName: string;
+    captainName: string;
+    captainEmail: string;
+    captainPhone: string;
+    playerCount: number;
+  }) => {
+    const res = await tournamentService.registerTeam(data);
+    if (res.success && res.data) {
+      loadData(); // Reload to refresh both registrations and components correctly
+    }
+  };
+
+  const filteredRegs = registrations.filter((r) => {
     const matchSearch =
       r.teamName.toLowerCase().includes(search.toLowerCase()) ||
       r.captainName.toLowerCase().includes(search.toLowerCase()) ||
@@ -125,13 +178,19 @@ const ManageTeams = () => {
     return matchSearch && matchStatus;
   });
 
+  const filteredTeams = teams.filter((t) => {
+    return t.name.toLowerCase().includes(search.toLowerCase()) ||
+      t.captainName.toLowerCase().includes(search.toLowerCase()) ||
+      t.sport.toLowerCase().includes(search.toLowerCase());
+  });
+
   const updateRegistration = (updated: DisplayRegistration) => {
     setRegistrations((rs) => rs.map((r) => (r.id === updated.id ? updated : r)));
   };
 
   // Stats
   const stats = {
-    total: registrations.length,
+    total: activeTab === "registrations" ? registrations.length : teams.length,
     pending: registrations.filter((r) => r.paymentStatus === "pending").length,
     confirmed: registrations.filter((r) => r.paymentStatus === "confirmed").length,
   };
@@ -143,9 +202,31 @@ const ManageTeams = () => {
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Teams & Registrations</h1>
           <p className="text-sm text-white/40 mt-0.5">
-            {registrations.length} team{registrations.length !== 1 ? "s" : ""} registered
+            Manage tournament entries and standalone teams
           </p>
         </div>
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="flex items-center gap-2 bg-white text-black px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-white/90 transition-all shrink-0 w-fit"
+        >
+          <Plus size={16} /> Create Team
+        </button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-white/[0.08]">
+        <button
+          onClick={() => setActiveTab("registrations")}
+          className={`px-5 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === "registrations" ? "border-white text-white" : "border-transparent text-white/40 hover:text-white/80"}`}
+        >
+          Tournament Registrations
+        </button>
+        <button
+          onClick={() => setActiveTab("standalone")}
+          className={`px-5 py-3 text-sm font-bold border-b-2 transition-all ${activeTab === "standalone" ? "border-white text-white" : "border-transparent text-white/40 hover:text-white/80"}`}
+        >
+          Standalone Teams
+        </button>
       </div>
 
       {/* Stat Cards */}
@@ -176,90 +257,163 @@ const ManageTeams = () => {
             className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-all"
           />
         </div>
-        <div className="flex gap-1 p-1 bg-white/[0.04] border border-white/[0.07] rounded-xl w-fit self-start">
-          {(["all", ...STATUS_OPTIONS]).map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${statusFilter === s ? "bg-white/10 text-white" : "text-white/35 hover:text-white/60"
-                }`}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl">
-        {/* Header */}
-        <div className="hidden md:grid grid-cols-[1.5fr_1.5fr_1.5fr_1fr_auto] gap-4 px-5 py-3 border-b border-white/[0.05] text-[10px] font-bold text-white/20 uppercase tracking-widest">
-          <span>Team Info</span>
-          <span>Tournament</span>
-          <span>Captain Details</span>
-          <span>Registered On</span>
-          <span>Status</span>
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 size={20} className="animate-spin text-white/30" />
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Users size={32} className="text-white/10" />
-            <p className="text-sm text-white/30">
-              {search || statusFilter !== "all" ? "No teams match your filters." : "No teams have registered yet."}
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-white/[0.04]">
-            {filtered.map((r) => (
-              <div
-                key={r.id}
-                className="grid grid-cols-1 md:grid-cols-[1.5fr_1.5fr_1.5fr_1fr_auto] gap-3 md:gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors items-center"
+        {activeTab === "registrations" && (
+          <div className="flex gap-1 p-1 bg-white/[0.04] border border-white/[0.07] rounded-xl w-fit self-start">
+            {(["all", ...STATUS_OPTIONS]).map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${statusFilter === s ? "bg-white/10 text-white" : "text-white/35 hover:text-white/60"
+                  }`}
               >
-                {/* Team Info */}
-                <div>
-                  <p className="text-sm font-bold text-white tracking-tight">{r.teamName}</p>
-                  <p className="text-xs text-white/40 flex items-center gap-1 mt-0.5">
-                    <Users size={10} /> {r.playerCount} Roster Size
-                  </p>
-                </div>
-
-                {/* Tournament */}
-                <div>
-                  <p className="text-sm font-semibold text-white/80">{r.tournamentName || "Unknown Tournament"}</p>
-                  <p className="text-xs text-white/40 flex items-center gap-1 mt-0.5 uppercase tracking-widest">
-                    <Trophy size={10} /> {r.sport || "N/A"}
-                  </p>
-                </div>
-
-                {/* Captain */}
-                <div>
-                  <p className="text-sm text-white/80">{r.captainName}</p>
-                  <p className="text-xs text-white/40 flex flex-col gap-0.5 mt-0.5">
-                    <span className="flex items-center gap-1"><Mail size={10} /> {r.captainEmail}</span>
-                    {r.captainPhone && <span className="flex items-center gap-1"><Phone size={10} /> {r.captainPhone}</span>}
-                  </p>
-                </div>
-
-                {/* Date */}
-                <p className="text-sm text-white/50 flex items-center gap-1.5">
-                  <CalendarDays size={12} className="text-white/20" />
-                  {fmtDate(r.createdAt || new Date().toISOString())}
-                </p>
-
-                {/* Status */}
-                <div className="flex flex-row items-center gap-2">
-                  <StatusChip status={r.paymentStatus || "pending"} />
-                  <StatusMenu reg={r} onUpdated={updateRegistration} />
-                </div>
-              </div>
+                {s}
+              </button>
             ))}
           </div>
         )}
       </div>
+
+      {/* Table */}
+      <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl">
+        {activeTab === "registrations" && (
+          <>
+            <div className="hidden md:grid grid-cols-[1.5fr_1.5fr_1.5fr_1fr_auto] gap-4 px-5 py-3 border-b border-white/[0.05] text-[10px] font-bold text-white/20 uppercase tracking-widest">
+              <span>Team Info</span>
+              <span>Tournament</span>
+              <span>Captain Details</span>
+              <span>Registered On</span>
+              <span>Status</span>
+            </div>
+
+            {loadingRegs ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 size={20} className="animate-spin text-white/30" />
+              </div>
+            ) : filteredRegs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <Users size={32} className="text-white/10" />
+                <p className="text-sm text-white/30">
+                  {search || statusFilter !== "all" ? "No registrations match your filters." : "No teams have registered yet."}
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-white/[0.04]">
+                {filteredRegs.map((r) => (
+                  <div
+                    key={r.id}
+                    className="grid grid-cols-1 md:grid-cols-[1.5fr_1.5fr_1.5fr_1fr_auto] gap-3 md:gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors items-center"
+                  >
+                    <div>
+                      <p className="text-sm font-bold text-white tracking-tight">{r.teamName}</p>
+                      <p className="text-xs text-white/40 flex items-center gap-1 mt-0.5">
+                        <Users size={10} /> {r.playerCount} Roster Size
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-white/80">{r.tournamentName || "Unknown Tournament"}</p>
+                      <p className="text-xs text-white/40 flex items-center gap-1 mt-0.5 uppercase tracking-widest">
+                        <Trophy size={10} /> {r.sport || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-white/80">{r.captainName}</p>
+                      <p className="text-xs text-white/40 flex flex-col gap-0.5 mt-0.5">
+                        <span className="flex items-center gap-1"><Mail size={10} /> {r.captainEmail}</span>
+                        {r.captainPhone && <span className="flex items-center gap-1"><Phone size={10} /> {r.captainPhone}</span>}
+                      </p>
+                    </div>
+                    <p className="text-sm text-white/50 flex items-center gap-1.5">
+                      <CalendarDays size={12} className="text-white/20" />
+                      {fmtDate(r.createdAt || new Date().toISOString())}
+                    </p>
+                    <div className="flex flex-row items-center gap-2">
+                      <StatusChip status={r.paymentStatus || "pending"} />
+                      <StatusMenu reg={r} onUpdated={updateRegistration} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Standalone Teams List */}
+        {activeTab === "standalone" && (
+          <>
+            <div className="hidden md:grid grid-cols-[1.5fr_1.5fr_2fr_1fr_auto] gap-4 px-5 py-3 border-b border-white/[0.05] text-[10px] font-bold text-white/20 uppercase tracking-widest">
+              <span>Team Name</span>
+              <span>Sport</span>
+              <span>Captain Details</span>
+              <span>Created On</span>
+            </div>
+
+            {loadingTeams ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 size={20} className="animate-spin text-white/30" />
+              </div>
+            ) : filteredTeams.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3">
+                <Users size={32} className="text-white/10" />
+                <p className="text-sm text-white/30">
+                  {search ? "No standalone teams match your search." : "No standalone teams created yet."}
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-white/[0.04]">
+                {filteredTeams.map((t) => (
+                  <div
+                    key={t.id}
+                    className="grid grid-cols-1 md:grid-cols-[1.5fr_1.5fr_2fr_1fr_auto] gap-3 md:gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors items-center"
+                  >
+                    <div>
+                      <p className="text-sm font-bold text-white tracking-tight">{t.name}</p>
+                    </div>
+                    <div>
+                      <span className="px-2 py-0.5 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-md text-xs font-bold uppercase tracking-widest">
+                        {t.sport || "N/A"}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm text-white/80">{t.captainName || "N/A"}</p>
+                      {t.phone && (
+                        <p className="text-xs text-white/40 flex items-center gap-1 mt-0.5">
+                          <Phone size={10} /> {t.phone}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-white/50 flex items-center gap-1.5">
+                        <CalendarDays size={12} className="text-white/20" />
+                        {fmtDate(t.createdAt || new Date().toISOString())}
+                      </p>
+                      <button
+                        onClick={() => setRegisteringTeam(t)}
+                        className="px-3 py-1.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-green-500/20 transition-all"
+                      >
+                        Register
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Modal */}
+      <CreateTeamModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSave={handleCreateTeam}
+      />
+      <RegisterToTournamentModal
+        isOpen={!!registeringTeam}
+        onClose={() => setRegisteringTeam(null)}
+        team={registeringTeam}
+        tournaments={tournaments}
+        onSave={handleRegisterTeam}
+      />
     </div>
   );
 };
