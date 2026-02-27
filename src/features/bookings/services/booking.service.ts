@@ -151,6 +151,33 @@ export const bookingService = {
     return createServiceResponse(mapped);
   },
 
+  /** User: check if the user has confirmed/pending bookings at other facilities for the selected date and slots */
+  async getMyConflicts(date: string, facilityId: string, slots: string[]): Promise<ServiceResponse<Booking[]>> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return createServiceResponse([], "User not logged in");
+
+    // postgres time might require the seconds, so ensure we check with seconds if the DB returns them
+    // actually postgrest handles "HH:MM" vs "HH:MM:SS" quite well, but let's be safe
+    const slotVariations = slots.flatMap(s => [s, `${s}:00`]);
+
+    const { data, error } = await supabase
+      .from("bookings")
+      .select("*, facilities(name)")
+      .eq("user_id", user.id)
+      .eq("date", date)
+      .neq("facility_id", facilityId)
+      .in("status", ["confirmed", "pending"])
+      .in("start_time", slotVariations)
+      .order("start_time", { ascending: true });
+
+    if (error) return createServiceResponse([], error.message);
+    const mapped = (data ?? []).map((row) => mapRow({
+      ...row,
+      facility_name: (row.facilities as { name: string } | null)?.name ?? "",
+    }));
+    return createServiceResponse(mapped);
+  },
+
   /** Admin: update booking status */
   async updateStatus(id: string, status: BookingStatus): Promise<ServiceResponse<Booking>> {
     const { data, error } = await supabase

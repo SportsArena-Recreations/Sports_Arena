@@ -85,6 +85,9 @@ const FacilityDetail = () => {
   const [bookError, setBookError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
+  const [conflictBookings, setConflictBookings] = useState<import("@/features/bookings/types").Booking[]>([]);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+
   // Calendar View State
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date(selectedDate);
@@ -388,19 +391,32 @@ const FacilityDetail = () => {
                   <CheckCircle2 size={11} className="text-green-400" /> Your Bookings Here
                 </p>
                 <div className="space-y-2">
-                  {myBookings.map((b) => (
-                    <div key={b.id} className="flex items-center justify-between px-4 py-3 rounded-xl bg-green-500/[0.06] border border-green-500/[0.12]">
-                      <div>
-                        <p className="text-sm font-semibold text-white">
-                          {fmtDate(b.date)} · {b.startTime.slice(0, 5)}–{b.endTime.slice(0, 5)}
-                        </p>
-                        <p className="text-xs text-white/40 mt-0.5">{fmt(b.totalPrice)}</p>
+                  {sortedMyBookings.map((b) => {
+                    const liveUntil = getLiveSessionEndTime(b);
+                    return (
+                      <div key={b.id} className={`flex items-center justify-between px-4 py-3 rounded-xl border ${liveUntil ? 'bg-green-500/[0.08] border-green-500/20' : 'bg-sky-500/[0.06] border-sky-500/[0.12]'}`}>
+                        <div>
+                          <p className="text-sm font-semibold text-white">
+                            {fmtDate(b.date)} · {b.startTime.slice(0, 5)}–{b.endTime.slice(0, 5)}
+                          </p>
+                          <p className="text-xs text-white/40 mt-0.5">{fmt(b.totalPrice)}</p>
+                        </div>
+                        {liveUntil ? (
+                          <span className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full border bg-green-500/10 text-green-400 border-green-500/20 uppercase tracking-wider">
+                            <span className="relative flex h-1.5 w-1.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                            </span>
+                            Live until {liveUntil}
+                          </span>
+                        ) : (
+                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full capitalize ${b.status === "confirmed" ? 'text-sky-400 bg-sky-500/10 border border-sky-500/20' : 'text-yellow-400 bg-yellow-500/10 border border-yellow-500/20'}`}>
+                            {b.status}
+                          </span>
+                        )}
                       </div>
-                      <span className="text-xs font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full capitalize">
-                        {b.status}
-                      </span>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -563,6 +579,7 @@ const FacilityDetail = () => {
               </p>
               <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
                 {slots.map((slot) => {
+                  const isPastSlot = isSlotPast(slot.start);
                   const isBooked = isSlotBooked(slot.start);
                   const isMine = isSlotMyBooking(slot.start);
                   const isSelected = isSlotSelected(slot.start);
@@ -639,62 +656,76 @@ const FacilityDetail = () => {
 
                   {/* Booking list */}
                   <div className="divide-y divide-white/[0.04]">
-                    {myBookings.map((b) => (
-                      <div key={b.id} className="px-6 py-4 space-y-3">
-                        {/* Date + Status row */}
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-bold text-white">{fmtDate(b.date)}</p>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full border capitalize ${b.status === "confirmed"
-                              ? "bg-green-500/10 text-green-400 border-green-500/20"
-                              : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                              }`}>
-                              {b.status}
-                            </span>
-                            <button
-                              onClick={() => handleCancelBooking(b.id)}
-                              disabled={cancellingId === b.id}
-                              className={`p-1.5 rounded-full border transition-all ${cancellingId === b.id
-                                ? "bg-white/5 border-white/10 text-white/20 cursor-wait"
-                                : "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white"
-                                }`}
-                              title="Cancel Booking"
-                            >
-                              {cancellingId === b.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
-                            </button>
-                          </div>
-                        </div>
+                    {sortedMyBookings.map((b) => {
+                      const liveUntil = getLiveSessionEndTime(b);
 
-                        {/* Details grid */}
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3">
-                            <p className="text-[10px] uppercase font-bold tracking-widest text-white/20 mb-1">Time</p>
-                            <p className="text-sm font-semibold text-white">
-                              {b.startTime.slice(0, 5)} – {b.endTime.slice(0, 5)}
-                            </p>
+                      return (
+                        <div key={b.id} className="px-6 py-4 space-y-3">
+                          {/* Date + Status row */}
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-bold text-white">{fmtDate(b.date)}</p>
+                            <div className="flex items-center gap-2">
+                              {liveUntil ? (
+                                <span className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border bg-green-500/10 text-green-400 border-green-500/20 uppercase tracking-wider">
+                                  <span className="relative flex h-1.5 w-1.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                                  </span>
+                                  Live until {liveUntil}
+                                </span>
+                              ) : (
+                                <span className={`text-xs font-bold px-2.5 py-1 rounded-full border capitalize ${b.status === "confirmed"
+                                  ? "bg-sky-500/10 text-sky-400 border-sky-500/20"
+                                  : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                                  }`}>
+                                  {b.status}
+                                </span>
+                              )}
+                              <button
+                                onClick={() => handleCancelBooking(b.id)}
+                                disabled={cancellingId === b.id}
+                                className={`p-1.5 rounded-full border transition-all ${cancellingId === b.id
+                                  ? "bg-white/5 border-white/10 text-white/20 cursor-wait"
+                                  : "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white"
+                                  }`}
+                                title="Cancel Booking"
+                              >
+                                {cancellingId === b.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
+                              </button>
+                            </div>
                           </div>
-                          <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3">
-                            <p className="text-[10px] uppercase font-bold tracking-widest text-white/20 mb-1">Total</p>
-                            <p className="text-sm font-bold text-white">{fmt(b.totalPrice)}</p>
-                          </div>
-                        </div>
 
-                        {/* Contact info */}
-                        <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3 space-y-0.5">
-                          <p className="text-[10px] uppercase font-bold tracking-widest text-white/20 mb-1.5">Booked as</p>
-                          <p className="text-xs text-white/70 font-medium">{b.userName}</p>
-                          <p className="text-xs text-white/40">{b.userEmail}</p>
-                          {b.userPhone && <p className="text-xs text-white/40">{b.userPhone}</p>}
-                        </div>
-
-                        {b.notes && (
-                          <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl px-3 py-2.5">
-                            <p className="text-[10px] uppercase font-bold tracking-widest text-white/20 mb-1">Notes</p>
-                            <p className="text-xs text-white/45 leading-relaxed">{b.notes}</p>
+                          {/* Details grid */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3">
+                              <p className="text-[10px] uppercase font-bold tracking-widest text-white/20 mb-1">Time</p>
+                              <p className="text-sm font-semibold text-white">
+                                {b.startTime.slice(0, 5)} – {b.endTime.slice(0, 5)}
+                              </p>
+                            </div>
+                            <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3">
+                              <p className="text-[10px] uppercase font-bold tracking-widest text-white/20 mb-1">Total</p>
+                              <p className="text-sm font-bold text-white">{fmt(b.totalPrice)}</p>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    ))}
+
+                          {/* Contact info */}
+                          <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3 space-y-0.5">
+                            <p className="text-[10px] uppercase font-bold tracking-widest text-white/20 mb-1.5">Booked as</p>
+                            <p className="text-xs text-white/70 font-medium">{b.userName}</p>
+                            <p className="text-xs text-white/40">{b.userEmail}</p>
+                            {b.userPhone && <p className="text-xs text-white/40">{b.userPhone}</p>}
+                          </div>
+
+                          {b.notes && (
+                            <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl px-3 py-2.5">
+                              <p className="text-[10px] uppercase font-bold tracking-widest text-white/20 mb-1">Notes</p>
+                              <p className="text-xs text-white/45 leading-relaxed">{b.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Footer: book another */}
@@ -733,6 +764,57 @@ const FacilityDetail = () => {
                   </div>
                 </motion.div>
 
+              ) : showConflictModal ? (
+                /* ── Conflict Warning Modal ── */
+                <motion.div
+                  key="conflict-modal"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="rounded-2xl border border-yellow-500/30 bg-[#0d0d11] overflow-hidden"
+                  style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(234,179,8,0.1)" }}
+                >
+                  <div className="px-6 py-5 border-b border-yellow-500/20 bg-yellow-500/5">
+                    <h2 className="text-base font-bold text-yellow-400 flex items-center gap-2">
+                      <AlertTriangle size={18} /> Booking Conflict
+                    </h2>
+                  </div>
+                  <div className="p-6 space-y-5">
+                    <p className="text-sm text-white/70 leading-relaxed">
+                      You already have a booking for this date and time at another facility.
+                      Are you sure you want to proceed with booking <strong>{facility.name}</strong> as well?
+                    </p>
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-bold tracking-widest uppercase text-white/30">Existing Booking</p>
+                      {conflictBookings.map((b) => (
+                        <div key={b.id} className="p-3 bg-white/[0.03] rounded-xl border border-white/10 flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-bold text-white">{b.facilityName || "Another facility"}</p>
+                            <p className="text-xs text-white/50 mt-0.5">
+                              {b.startTime.slice(0, 5)} - {b.endTime.slice(0, 5)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={() => setShowConflictModal(false)}
+                        className="flex-1 py-2.5 rounded-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/5 transition-all text-sm font-semibold"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={executeBooking}
+                        disabled={booking}
+                        className="flex-1 py-2.5 rounded-xl bg-yellow-400 text-black text-sm font-bold hover:bg-yellow-300 transition-all flex justify-center items-center gap-2"
+                      >
+                        {booking && <Loader2 size={14} className="animate-spin" />}
+                        Proceed Anyway
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
               ) : (
                 /* ── Booking form ── */
                 <motion.div
