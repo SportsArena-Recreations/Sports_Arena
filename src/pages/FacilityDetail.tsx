@@ -69,6 +69,9 @@ const FacilityDetail = () => {
   const [bookError, setBookError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
+  const [conflictBookings, setConflictBookings] = useState<import("@/features/bookings/types").Booking[]>([]);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+
   // Calendar View State
   const [currentMonth, setCurrentMonth] = useState(() => {
     const d = new Date(selectedDate);
@@ -150,13 +153,31 @@ const FacilityDetail = () => {
     }));
   }, [fullName, user]);
 
-  const handleBook = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleBook = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!facility || !selectedSlot || !user || !session) return;
     if (!form.name.trim() || !form.email.trim()) { setBookError("Name and email are required."); return; }
 
     setBooking(true);
     setBookError(null);
+
+    // Check for conflicts first
+    const conflictRes = await bookingService.getMyConflicts(selectedDate, facility.id, [selectedSlot]);
+    if (conflictRes.success && conflictRes.data && conflictRes.data.length > 0) {
+      setConflictBookings(conflictRes.data);
+      setShowConflictModal(true);
+      setBooking(false);
+      return;
+    }
+
+    await executeBooking();
+  };
+
+  const executeBooking = async () => {
+    setBooking(true);
+    setShowConflictModal(false);
+
+    if (!facility || !selectedSlot || !user) return;
 
     const res = await bookingService.create({
       facilityId: facility.id,
@@ -585,6 +606,57 @@ const FacilityDetail = () => {
                   </div>
                 </motion.div>
 
+              ) : showConflictModal ? (
+                /* ── Conflict Warning Modal ── */
+                <motion.div
+                  key="conflict-modal"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="rounded-2xl border border-yellow-500/30 bg-[#0d0d11] overflow-hidden"
+                  style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(234,179,8,0.1)" }}
+                >
+                  <div className="px-6 py-5 border-b border-yellow-500/20 bg-yellow-500/5">
+                    <h2 className="text-base font-bold text-yellow-400 flex items-center gap-2">
+                      <AlertTriangle size={18} /> Booking Conflict
+                    </h2>
+                  </div>
+                  <div className="p-6 space-y-5">
+                    <p className="text-sm text-white/70 leading-relaxed">
+                      You already have a booking for this date and time at another facility.
+                      Are you sure you want to proceed with booking <strong>{facility.name}</strong> as well?
+                    </p>
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-bold tracking-widest uppercase text-white/30">Existing Booking</p>
+                      {conflictBookings.map((b) => (
+                        <div key={b.id} className="p-3 bg-white/[0.03] rounded-xl border border-white/10 flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-bold text-white">{b.facilityName || "Another facility"}</p>
+                            <p className="text-xs text-white/50 mt-0.5">
+                              {b.startTime.slice(0, 5)} - {b.endTime.slice(0, 5)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={() => setShowConflictModal(false)}
+                        className="flex-1 py-2.5 rounded-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/5 transition-all text-sm font-semibold"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={executeBooking}
+                        disabled={booking}
+                        className="flex-1 py-2.5 rounded-xl bg-yellow-400 text-black text-sm font-bold hover:bg-yellow-300 transition-all flex justify-center items-center gap-2"
+                      >
+                        {booking && <Loader2 size={14} className="animate-spin" />}
+                        Proceed Anyway
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
               ) : (
                 /* ── Booking form ── */
                 <motion.div
