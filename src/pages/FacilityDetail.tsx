@@ -5,6 +5,7 @@ import { facilityService } from "@/features/facilities/services/facility.service
 import { bookingService } from "@/features/bookings/services/booking.service";
 import { tournamentService } from "@/features/tournaments/services/tournament.service";
 import { Facility } from "@/features/facilities/types";
+import { Booking } from "@/features/bookings/types";
 import { Tournament } from "@/features/tournaments/types";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useAuth } from "@/context/AuthContext";
@@ -188,13 +189,11 @@ const FacilityDetail = () => {
     );
   };
 
-  const handleBook = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const executeBooking = async () => {
     if (!facility || selectedSlots.length === 0 || !user || !session) return;
-    if (!form.name.trim() || !form.email.trim()) { setBookError("Name and email are required."); return; }
-
     setBooking(true);
     setBookError(null);
+    setShowConflictModal(false);
 
     // Sort slots so they're submitted in order
     const sortedSlots = [...selectedSlots].sort();
@@ -226,6 +225,26 @@ const FacilityDetail = () => {
     bookingService.getMineForFacility(facility.id).then((r) => setMyBookings(r.data));
     bookingService.getBookedDaysInMonth(facility.id, currentMonth.getFullYear(), currentMonth.getMonth())
       .then((res) => setMonthBookedDates(res.data));
+  };
+
+  const handleBook = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!facility || selectedSlots.length === 0 || !user || !session) return;
+    if (!form.name.trim() || !form.email.trim()) { setBookError("Name and email are required."); return; }
+
+    setBooking(true);
+    setBookError(null);
+
+    // Check for conflicts with existing bookings at other facilities
+    const conflictRes = await bookingService.getMyConflicts(selectedDate, facility.id, selectedSlots);
+    if (conflictRes.success && conflictRes.data && conflictRes.data.length > 0) {
+      setConflictBookings(conflictRes.data);
+      setShowConflictModal(true);
+      setBooking(false);
+      return;
+    }
+
+    await executeBooking();
   };
 
   const handleCancelBooking = async (bookingId: string) => {
@@ -295,6 +314,55 @@ const FacilityDetail = () => {
   const totalPrice = selectedSlots.length * facility.pricePerHour;
 
 
+  // Helper to check if a specific time slot has already passed based on the current local time
+  const isSlotPast = (start: string) => {
+    const now = new Date();
+    // Compare selected date with today's date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDateObj = new Date(selectedDate);
+    selectedDateObj.setHours(0, 0, 0, 0);
+
+    // If selected date is in the past, all slots are past
+    if (selectedDateObj < today) return true;
+
+    // If selected date is today, check if the slot time has passed
+    if (selectedDateObj.getTime() === today.getTime()) {
+      const currentHour = now.getHours();
+      const currentMinutes = now.getMinutes();
+      const [slotHour, slotMinutes] = start.split(':').map(Number);
+
+      return slotHour < currentHour || (slotHour === currentHour && slotMinutes <= currentMinutes);
+    }
+
+    // If selected date is in the future, no slots have passed
+    return false;
+  };
+
+  const getLiveSessionEndTime = (booking: Booking) => {
+    if (booking.status !== "confirmed") return null;
+    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const bookingDate = new Date(booking.date + "T00:00:00");
+    if (bookingDate.getTime() !== today.getTime()) return null;
+
+    const startHour = parseInt(booking.startTime.split(':')[0], 10);
+    const endHour = parseInt(booking.endTime.split(':')[0], 10);
+    const currentHour = now.getHours();
+
+    // Check if this specific booking is live
+    if (currentHour >= startHour && currentHour < endHour) {
+      return booking.endTime.slice(0, 5);
+    }
+    return null;
+  };
+
+  const sortedMyBookings = [...myBookings].sort((a, b) => {
+    const timeA = new Date(`${a.date}T${a.startTime}`).getTime();
+    const timeB = new Date(`${b.date}T${b.startTime}`).getTime();
+    return timeA - timeB;
+  });
 
   return (
     <div className="min-h-screen bg-[#080809]">

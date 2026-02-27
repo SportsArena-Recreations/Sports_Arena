@@ -4,6 +4,8 @@ import { FacilityCard } from "@/features/facilities/components/FacilityCard";
 import { facilityService } from "@/features/facilities/services/facility.service";
 import { bookingService } from "@/features/bookings/services/booking.service";
 import { Facility, FacilityType } from "@/features/facilities/types";
+import { useAuth } from "@/context/AuthContext";
+import { Booking } from "@/features/bookings/types";
 
 const facilityTypes: { label: string; value: FacilityType | "all" }[] = [
   { label: "All", value: "all" },
