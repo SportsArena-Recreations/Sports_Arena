@@ -289,8 +289,6 @@ const FacilityDetail = () => {
   const slots = generateSlots(facility.pricePerHour);
   const isSlotBooked = (start: string) =>
     bookedSlots.some((b) => b.startTime.slice(0, 5) === start);
-  const isSlotMyBooking = (start: string) =>
-    myBookings.some((b) => b.date === selectedDate && b.startTime.slice(0, 5) === start);
 
   // Helper: get tournaments happening on a given date
   const getTournamentsOnDate = (isoDate: string) =>
@@ -379,6 +377,8 @@ const FacilityDetail = () => {
     const timeB = new Date(`${b.date}T${b.startTime}`).getTime();
     return timeA - timeB;
   });
+
+  const activeMyBookings = sortedMyBookings.filter((b) => getLiveSessionEndTime(b) || !isBookingPast(b));
 
   return (
     <div className="min-h-screen bg-[#080809]">
@@ -670,7 +670,10 @@ const FacilityDetail = () => {
                 {slots.map((slot) => {
                   const isPastSlot = isSlotPast(slot.start);
                   const isBooked = isSlotBooked(slot.start);
-                  const isMine = isSlotMyBooking(slot.start);
+                  const myBookingForSlot = myBookings.find((b) => b.date === selectedDate && b.startTime.slice(0, 5) === slot.start);
+                  const isMine = !!myBookingForSlot;
+                  const isLiveSlot = myBookingForSlot ? !!getLiveSessionEndTime(myBookingForSlot) : false;
+                  const isPassedMine = isMine && !isLiveSlot && isPastSlot;
                   const isSelected = isSlotSelected(slot.start);
                   const tournamentSlots = getTournamentsOnSlot(slot.start);
                   const isTournamentSlot = tournamentSlots.length > 0;
@@ -687,14 +690,32 @@ const FacilityDetail = () => {
                           ? "bg-purple-500/[0.08] border-purple-500/20 text-purple-400 cursor-not-allowed"
                           : isBooked
                             ? isMine
-                              ? "bg-green-500/[0.08] border-green-500/20 text-green-400 cursor-not-allowed"
+                              ? isLiveSlot
+                                ? "bg-green-500/[0.08] border-green-500/20 text-green-400 cursor-not-allowed"
+                                : isPassedMine
+                                  ? "bg-red-500/[0.08] border-red-500/20 text-red-500 cursor-not-allowed"
+                                  : "bg-sky-500/[0.08] border-sky-500/20 text-sky-400 cursor-not-allowed"
                               : "bg-white/[0.02] border-white/[0.04] text-white/15 cursor-not-allowed line-through"
                             : "bg-white/[0.04] border-white/[0.08] text-white/60 hover:border-white/25 hover:text-white cursor-pointer"
                         }`}
                     >
                       <span className="text-xs font-bold">{slot.start}</span>
                       <span className="text-[10px] opacity-75 mt-0.5">
-                        {isTournamentSlot ? "🏆" : isBooked ? (isMine ? "Yours" : "Taken") : fmt(slot.price)}
+                        {isTournamentSlot ? "🏆" : isBooked ? (isMine ? (
+                          isLiveSlot ? (
+                            <span className="flex items-center gap-1.5 justify-center">
+                              <span className="relative flex h-1.5 w-1.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                              </span>
+                              Live
+                            </span>
+                          ) : isPassedMine ? (
+                            "Passed"
+                          ) : (
+                            "Yours"
+                          )
+                        ) : "Taken") : fmt(slot.price)}
                       </span>
                     </button>
                   );
@@ -720,7 +741,7 @@ const FacilityDetail = () => {
             <AnimatePresence mode="wait">
 
               {/* ── Has bookings → show details card ── */}
-              {session && myBookings.length > 0 ? (
+              {session && activeMyBookings.length > 0 ? (
                 <motion.div
                   key="my-bookings"
                   initial={{ opacity: 0, y: 12 }}
@@ -738,14 +759,14 @@ const FacilityDetail = () => {
                     <div>
                       <h2 className="text-sm font-bold text-white">You're booked! 🎉</h2>
                       <p className="text-[11px] text-white/35 mt-0.5">
-                        {myBookings.length} active booking{myBookings.length > 1 ? "s" : ""} at this facility
+                        {activeMyBookings.length} active booking{activeMyBookings.length !== 1 ? "s" : ""} at this facility
                       </p>
                     </div>
                   </div>
 
                   {/* Booking list */}
                   <div className="divide-y divide-white/[0.04]">
-                    {sortedMyBookings.map((b) => {
+                    {activeMyBookings.map((b) => {
                       const liveUntil = getLiveSessionEndTime(b);
                       const isPassed = !liveUntil && isBookingPast(b);
 
