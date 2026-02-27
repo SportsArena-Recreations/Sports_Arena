@@ -339,6 +339,22 @@ const FacilityDetail = () => {
     return false;
   };
 
+  // Helper to check if an entire booking has passed
+  const isBookingPast = (b: Booking) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const bDate = new Date(b.date + "T00:00:00");
+    if (bDate < today) return true;
+    if (bDate.getTime() === today.getTime()) {
+      const now = new Date();
+      const currentH = now.getHours();
+      const currentM = now.getMinutes();
+      const [endH, endM] = b.endTime.split(':').map(Number);
+      return endH < currentH || (endH === currentH && endM <= currentM);
+    }
+    return false;
+  };
+
   const getLiveSessionEndTime = (booking: Booking) => {
     if (booking.status !== "confirmed") return null;
     const now = new Date();
@@ -461,10 +477,11 @@ const FacilityDetail = () => {
                 <div className="space-y-2">
                   {sortedMyBookings.map((b) => {
                     const liveUntil = getLiveSessionEndTime(b);
+                    const isPassed = !liveUntil && isBookingPast(b);
                     return (
-                      <div key={b.id} className={`flex items-center justify-between px-4 py-3 rounded-xl border ${liveUntil ? 'bg-green-500/[0.08] border-green-500/20' : 'bg-sky-500/[0.06] border-sky-500/[0.12]'}`}>
+                      <div key={b.id} className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-all ${liveUntil ? 'bg-green-500/[0.08] border-green-500/20' : isPassed ? 'bg-white/[0.02] border-white/[0.05] opacity-60' : 'bg-sky-500/[0.06] border-sky-500/[0.12]'}`}>
                         <div>
-                          <p className="text-sm font-semibold text-white">
+                          <p className={`text-sm font-semibold ${isPassed ? 'text-white/60' : 'text-white'}`}>
                             {fmtDate(b.date)} · {b.startTime.slice(0, 5)}–{b.endTime.slice(0, 5)}
                           </p>
                           <p className="text-xs text-white/40 mt-0.5">{fmt(b.totalPrice)}</p>
@@ -476,6 +493,10 @@ const FacilityDetail = () => {
                               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
                             </span>
                             Live until {liveUntil}
+                          </span>
+                        ) : isPassed ? (
+                          <span className="text-xs font-bold px-2.5 py-1 rounded-full border capitalize text-red-400/80 bg-red-500/[0.08] border-red-500/20">
+                            Passed
                           </span>
                         ) : (
                           <span className={`text-xs font-bold px-2.5 py-1 rounded-full capitalize ${b.status === "confirmed" ? 'text-sky-400 bg-sky-500/10 border border-sky-500/20' : 'text-yellow-400 bg-yellow-500/10 border border-yellow-500/20'}`}>
@@ -583,7 +604,7 @@ const FacilityDetail = () => {
                 {/* Calendar legend */}
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 pt-3 border-t border-white/[0.04]">
                   <span className="flex items-center gap-1.5 text-[10px] text-white/25">
-                    <span className="h-1.5 w-1.5 rounded-full bg-green-400" /> Your booking
+                    <span className="h-1.5 w-1.5 rounded-full bg-sky-400" /> Your booking
                   </span>
                   <span className="flex items-center gap-1.5 text-[10px] text-white/25">
                     <span className="h-1.5 w-1.5 rounded-full bg-white/40" /> Booked
@@ -685,7 +706,7 @@ const FacilityDetail = () => {
                   <span className="h-1.5 w-1.5 rounded-full bg-white/40" /> Available
                 </span>
                 <span className="flex items-center gap-1.5 text-[10px] text-white/25">
-                  <span className="h-1.5 w-1.5 rounded-full bg-green-400" /> Your booking
+                  <span className="h-1.5 w-1.5 rounded-full bg-sky-400" /> Your booking
                 </span>
                 <span className="flex items-center gap-1.5 text-[10px] text-white/25">
                   <span className="h-1.5 w-1.5 rounded-full bg-purple-400" /> 🏆 Tournament
@@ -726,9 +747,10 @@ const FacilityDetail = () => {
                   <div className="divide-y divide-white/[0.04]">
                     {sortedMyBookings.map((b) => {
                       const liveUntil = getLiveSessionEndTime(b);
+                      const isPassed = !liveUntil && isBookingPast(b);
 
                       return (
-                        <div key={b.id} className="px-6 py-4 space-y-3">
+                        <div key={b.id} className={`px-6 py-4 space-y-3 transition-opacity ${isPassed ? 'opacity-60 grayscale-[0.3]' : ''}`}>
                           {/* Date + Status row */}
                           <div className="flex items-center justify-between">
                             <p className="text-sm font-bold text-white">{fmtDate(b.date)}</p>
@@ -740,6 +762,10 @@ const FacilityDetail = () => {
                                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
                                   </span>
                                   Live until {liveUntil}
+                                </span>
+                              ) : isPassed ? (
+                                <span className="text-xs font-bold px-2.5 py-1 rounded-full border capitalize bg-red-500/[0.08] text-red-400/80 border-red-500/20">
+                                  Passed
                                 </span>
                               ) : (
                                 <span className={`text-xs font-bold px-2.5 py-1 rounded-full border capitalize ${b.status === "confirmed"
