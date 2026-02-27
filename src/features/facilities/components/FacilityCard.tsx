@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Facility } from "@/features/facilities/types";
+import { Booking } from "@/features/bookings/types";
 import { StatusBadge } from "@/components/shared/StatusBadge";
-import { Users, Clock } from "lucide-react";
+import { Users, Clock, CalendarDays } from "lucide-react";
 
 // Sport-specific gradient placeholders — shown when no image is set
 const SPORT_PLACEHOLDERS: Record<string, { emoji: string; from: string; via: string; to: string }> = {
@@ -17,12 +18,29 @@ const SPORT_PLACEHOLDERS: Record<string, { emoji: string; from: string; via: str
 
 interface FacilityCardProps {
   facility: Facility;
+  closestBooking?: Booking;
 }
 
-export function FacilityCard({ facility }: FacilityCardProps) {
+export function FacilityCard({ facility, closestBooking }: FacilityCardProps) {
   const [imgError, setImgError] = useState(false);
   const hasImage = facility.imageUrl && facility.imageUrl.startsWith("http") && !imgError;
   const placeholder = SPORT_PLACEHOLDERS[facility.type] ?? SPORT_PLACEHOLDERS.multipurpose;
+
+  const isLive = (() => {
+    if (!closestBooking || closestBooking.status !== "confirmed") return false;
+    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const bookingDate = new Date(closestBooking.date + "T00:00:00");
+
+    if (bookingDate.getTime() === today.getTime()) {
+      const startHour = parseInt(closestBooking.startTime.split(':')[0], 10);
+      const endHour = parseInt(closestBooking.endTime.split(':')[0], 10);
+      const currentHour = now.getHours();
+      return currentHour >= startHour && currentHour < endHour;
+    }
+    return false;
+  })();
 
   return (
     <Link to={`/facilities/${facility.id}`} className="group block">
@@ -68,16 +86,21 @@ export function FacilityCard({ facility }: FacilityCardProps) {
           <StatusBadge status={facility.status} />
         </div>
 
-        {/* Meta pills */}
-        <div className="absolute left-6 bottom-6 z-10 flex gap-2">
-          <span className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-semibold text-white/90 border border-white/10">
-            <Users size={14} />
-            {facility.capacity}
-          </span>
-          <span className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-semibold text-white/90 border border-white/10">
-            <Clock size={14} />
-            1hr
-          </span>
+        {/* Info overlay inside card */}
+        <div className="absolute inset-x-0 bottom-0 z-10 p-6 flex flex-col justify-end pt-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
+          <p className="text-white/80 line-clamp-2 text-sm leading-relaxed mb-4 group-hover:text-white transition-colors">
+            {facility.description}
+          </p>
+          <div className="flex gap-2">
+            <span className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-semibold text-white border border-white/10 hover:bg-white/20 transition-colors">
+              <Users size={14} className="opacity-70" />
+              {facility.capacity}
+            </span>
+            <span className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-semibold text-white border border-white/10 hover:bg-white/20 transition-colors">
+              <Clock size={14} className="opacity-70" />
+              1hr
+            </span>
+          </div>
         </div>
       </div>
 
@@ -91,9 +114,42 @@ export function FacilityCard({ facility }: FacilityCardProps) {
             ₦{facility.pricePerHour.toLocaleString("en-NG")}/hr
           </div>
         </div>
-        <p className="text-white/50 leading-relaxed max-w-[90%] line-clamp-2 text-sm md:text-base">
-          {facility.description}
-        </p>
+
+        {closestBooking ? (
+          <div className={`mb-3 flex items-center gap-2 p-2.5 rounded-xl ${isLive ? 'bg-green-500/[0.08] border border-green-500/20' : 'bg-sky-500/[0.08] border border-sky-500/20'}`}>
+            <div className={`flex h-7 w-7 items-center justify-center rounded-full ${isLive ? 'bg-green-500/20 text-green-400' : 'bg-sky-500/20 text-sky-400'}`}>
+              <CalendarDays size={14} />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                {isLive && (
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                  </span>
+                )}
+                <p className={`text-[10px] font-bold uppercase tracking-widest ${isLive ? 'text-green-400' : 'text-sky-400/80'}`}>
+                  {isLive ? 'Live Now' : 'Upcoming Booking'}
+                </p>
+              </div>
+              <p className={`text-xs font-semibold ${isLive ? 'text-green-100' : 'text-sky-100'}`}>
+                {new Date(closestBooking.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} at {closestBooking.startTime.slice(0, 5)}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-3 flex items-center gap-2 p-2.5 bg-white/[0.02] border border-white/[0.05] rounded-xl group-hover:bg-white/[0.04] group-hover:border-white/10 transition-colors">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/[0.05] text-white/40 group-hover:text-white/60 transition-colors">
+              <CalendarDays size={14} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-0.5 group-hover:text-white/40 transition-colors">Available</p>
+              <p className="text-xs font-semibold text-white/50 group-hover:text-white/70 transition-colors">
+                Book your next session
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </Link>
   );

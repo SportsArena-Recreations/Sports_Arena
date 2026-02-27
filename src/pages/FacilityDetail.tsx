@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { facilityService } from "@/features/facilities/services/facility.service";
 import { bookingService } from "@/features/bookings/services/booking.service";
 import { Facility } from "@/features/facilities/types";
+import { Booking } from "@/features/bookings/types";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -246,6 +247,56 @@ const FacilityDetail = () => {
   const isSlotMyBooking = (start: string) =>
     myBookings.some((b) => b.date === selectedDate && b.startTime.slice(0, 5) === start);
 
+  // Helper to check if a specific time slot has already passed based on the current local time
+  const isSlotPast = (start: string) => {
+    const now = new Date();
+    // Compare selected date with today's date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDateObj = new Date(selectedDate);
+    selectedDateObj.setHours(0, 0, 0, 0);
+
+    // If selected date is in the past, all slots are past
+    if (selectedDateObj < today) return true;
+
+    // If selected date is today, check if the slot time has passed
+    if (selectedDateObj.getTime() === today.getTime()) {
+      const currentHour = now.getHours();
+      const currentMinutes = now.getMinutes();
+      const [slotHour, slotMinutes] = start.split(':').map(Number);
+
+      return slotHour < currentHour || (slotHour === currentHour && slotMinutes <= currentMinutes);
+    }
+
+    // If selected date is in the future, no slots have passed
+    return false;
+  };
+
+  const getLiveSessionEndTime = (booking: Booking) => {
+    if (booking.status !== "confirmed") return null;
+    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const bookingDate = new Date(booking.date + "T00:00:00");
+    if (bookingDate.getTime() !== today.getTime()) return null;
+
+    const startHour = parseInt(booking.startTime.split(':')[0], 10);
+    const endHour = parseInt(booking.endTime.split(':')[0], 10);
+    const currentHour = now.getHours();
+
+    // Check if this specific booking is live
+    if (currentHour >= startHour && currentHour < endHour) {
+      return booking.endTime.slice(0, 5);
+    }
+    return null;
+  };
+
+  const sortedMyBookings = [...myBookings].sort((a, b) => {
+    const timeA = new Date(`${a.date}T${a.startTime}`).getTime();
+    const timeB = new Date(`${b.date}T${b.startTime}`).getTime();
+    return timeA - timeB;
+  });
+
   return (
     <div className="min-h-screen bg-[#080809]">
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
@@ -341,19 +392,32 @@ const FacilityDetail = () => {
                   <CheckCircle2 size={11} className="text-green-400" /> Your Bookings Here
                 </p>
                 <div className="space-y-2">
-                  {myBookings.map((b) => (
-                    <div key={b.id} className="flex items-center justify-between px-4 py-3 rounded-xl bg-green-500/[0.06] border border-green-500/[0.12]">
-                      <div>
-                        <p className="text-sm font-semibold text-white">
-                          {fmtDate(b.date)} · {b.startTime.slice(0, 5)}–{b.endTime.slice(0, 5)}
-                        </p>
-                        <p className="text-xs text-white/40 mt-0.5">{fmt(b.totalPrice)}</p>
+                  {sortedMyBookings.map((b) => {
+                    const liveUntil = getLiveSessionEndTime(b);
+                    return (
+                      <div key={b.id} className={`flex items-center justify-between px-4 py-3 rounded-xl border ${liveUntil ? 'bg-green-500/[0.08] border-green-500/20' : 'bg-sky-500/[0.06] border-sky-500/[0.12]'}`}>
+                        <div>
+                          <p className="text-sm font-semibold text-white">
+                            {fmtDate(b.date)} · {b.startTime.slice(0, 5)}–{b.endTime.slice(0, 5)}
+                          </p>
+                          <p className="text-xs text-white/40 mt-0.5">{fmt(b.totalPrice)}</p>
+                        </div>
+                        {liveUntil ? (
+                          <span className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full border bg-green-500/10 text-green-400 border-green-500/20 uppercase tracking-wider">
+                            <span className="relative flex h-1.5 w-1.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                            </span>
+                            Live until {liveUntil}
+                          </span>
+                        ) : (
+                          <span className={`text-xs font-bold px-2.5 py-1 rounded-full capitalize ${b.status === "confirmed" ? 'text-sky-400 bg-sky-500/10 border border-sky-500/20' : 'text-yellow-400 bg-yellow-500/10 border border-yellow-500/20'}`}>
+                            {b.status}
+                          </span>
+                        )}
                       </div>
-                      <span className="text-xs font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full capitalize">
-                        {b.status}
-                      </span>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}
@@ -431,14 +495,17 @@ const FacilityDetail = () => {
                       >
                         <span className="relative z-10">{d.date.getDate()}</span>
                         {/* Booked indicator dot */}
-                        {(isBooked || isMyBookingDate) && !isPast && (
-                          <span className={`absolute bottom-0.5 md:bottom-1 h-1 w-1 rounded-full ${isSelected
-                            ? "bg-black"
-                            : isMyBookingDate
-                              ? "bg-green-400"
-                              : "bg-white/40"
-                            }`} />
-                        )}
+                        {(isBooked || isMyBookingDate) && !isPast && (() => {
+                          const isLiveDate = myBookings.some(b => b.date === isoDate && getLiveSessionEndTime(b) !== null);
+                          return (
+                            <span className={`absolute bottom-0.5 md:bottom-1 h-1 w-1 rounded-full ${isSelected
+                              ? "bg-black"
+                              : isMyBookingDate
+                                ? isLiveDate ? "bg-green-400" : "bg-sky-400"
+                                : "bg-white/40"
+                              }`} />
+                          );
+                        })()}
                       </button>
                     );
                   })}
@@ -453,27 +520,45 @@ const FacilityDetail = () => {
               </p>
               <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
                 {slots.map((slot) => {
+                  const isPastSlot = isSlotPast(slot.start);
                   const isBooked = isSlotBooked(slot.start);
                   const isMine = isSlotMyBooking(slot.start);
                   const isSelected = selectedSlot === slot.start;
+                  const isSlotLive = isMine && myBookings.some(b => b.date === selectedDate && b.startTime.slice(0, 5) === slot.start && getLiveSessionEndTime(b) !== null);
 
                   return (
                     <button
                       key={slot.id}
-                      disabled={isBooked || facility.status !== "available"}
+                      disabled={isBooked || isPastSlot || facility.status !== "available"}
                       onClick={() => setSelectedSlot(isSelected ? null : slot.start)}
                       className={`flex flex-col items-center py-2.5 px-1 rounded-xl border text-center transition-all ${isSelected
                         ? "bg-white border-white text-black"
                         : isBooked
                           ? isMine
-                            ? "bg-green-500/[0.08] border-green-500/20 text-green-400 cursor-not-allowed"
+                            ? isSlotLive
+                              ? "bg-green-500/[0.08] border-green-500/20 text-green-400 cursor-not-allowed"
+                              : "bg-sky-500/[0.08] border-sky-500/20 text-sky-400 cursor-not-allowed"
                             : "bg-white/[0.02] border-white/[0.04] text-white/15 cursor-not-allowed line-through"
-                          : "bg-white/[0.04] border-white/[0.08] text-white/60 hover:border-white/25 hover:text-white cursor-pointer"
+                          : isPastSlot
+                            ? "bg-white/[0.01] border-white/[0.02] text-white/10 cursor-not-allowed line-through"
+                            : "bg-white/[0.04] border-white/[0.08] text-white/60 hover:border-white/25 hover:text-white cursor-pointer"
                         }`}
                     >
                       <span className="text-xs font-bold">{slot.start}</span>
                       <span className="text-[10px] opacity-60 mt-0.5">
-                        {isBooked ? (isMine ? "Yours" : "Taken") : fmt(slot.price)}
+                        {isBooked ? (
+                          isMine ? (
+                            isSlotLive ? (
+                              <span className="flex items-center gap-1 justify-center">
+                                <span className="relative flex h-1.5 w-1.5">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                                </span>
+                                Live
+                              </span>
+                            ) : "Yours"
+                          ) : "Taken"
+                        ) : isPastSlot ? "Passed" : fmt(slot.price)}
                       </span>
                     </button>
                   );
@@ -512,62 +597,76 @@ const FacilityDetail = () => {
 
                   {/* Booking list */}
                   <div className="divide-y divide-white/[0.04]">
-                    {myBookings.map((b) => (
-                      <div key={b.id} className="px-6 py-4 space-y-3">
-                        {/* Date + Status row */}
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-bold text-white">{fmtDate(b.date)}</p>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full border capitalize ${b.status === "confirmed"
-                              ? "bg-green-500/10 text-green-400 border-green-500/20"
-                              : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                              }`}>
-                              {b.status}
-                            </span>
-                            <button
-                              onClick={() => handleCancelBooking(b.id)}
-                              disabled={cancellingId === b.id}
-                              className={`p-1.5 rounded-full border transition-all ${cancellingId === b.id
-                                ? "bg-white/5 border-white/10 text-white/20 cursor-wait"
-                                : "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white"
-                                }`}
-                              title="Cancel Booking"
-                            >
-                              {cancellingId === b.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
-                            </button>
-                          </div>
-                        </div>
+                    {sortedMyBookings.map((b) => {
+                      const liveUntil = getLiveSessionEndTime(b);
 
-                        {/* Details grid */}
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3">
-                            <p className="text-[10px] uppercase font-bold tracking-widest text-white/20 mb-1">Time</p>
-                            <p className="text-sm font-semibold text-white">
-                              {b.startTime.slice(0, 5)} – {b.endTime.slice(0, 5)}
-                            </p>
+                      return (
+                        <div key={b.id} className="px-6 py-4 space-y-3">
+                          {/* Date + Status row */}
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-bold text-white">{fmtDate(b.date)}</p>
+                            <div className="flex items-center gap-2">
+                              {liveUntil ? (
+                                <span className="flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border bg-green-500/10 text-green-400 border-green-500/20 uppercase tracking-wider">
+                                  <span className="relative flex h-1.5 w-1.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-500"></span>
+                                  </span>
+                                  Live until {liveUntil}
+                                </span>
+                              ) : (
+                                <span className={`text-xs font-bold px-2.5 py-1 rounded-full border capitalize ${b.status === "confirmed"
+                                  ? "bg-sky-500/10 text-sky-400 border-sky-500/20"
+                                  : "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                                  }`}>
+                                  {b.status}
+                                </span>
+                              )}
+                              <button
+                                onClick={() => handleCancelBooking(b.id)}
+                                disabled={cancellingId === b.id}
+                                className={`p-1.5 rounded-full border transition-all ${cancellingId === b.id
+                                  ? "bg-white/5 border-white/10 text-white/20 cursor-wait"
+                                  : "bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white"
+                                  }`}
+                                title="Cancel Booking"
+                              >
+                                {cancellingId === b.id ? <Loader2 size={12} className="animate-spin" /> : <X size={12} />}
+                              </button>
+                            </div>
                           </div>
-                          <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3">
-                            <p className="text-[10px] uppercase font-bold tracking-widest text-white/20 mb-1">Total</p>
-                            <p className="text-sm font-bold text-white">{fmt(b.totalPrice)}</p>
-                          </div>
-                        </div>
 
-                        {/* Contact info */}
-                        <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3 space-y-0.5">
-                          <p className="text-[10px] uppercase font-bold tracking-widest text-white/20 mb-1.5">Booked as</p>
-                          <p className="text-xs text-white/70 font-medium">{b.userName}</p>
-                          <p className="text-xs text-white/40">{b.userEmail}</p>
-                          {b.userPhone && <p className="text-xs text-white/40">{b.userPhone}</p>}
-                        </div>
-
-                        {b.notes && (
-                          <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl px-3 py-2.5">
-                            <p className="text-[10px] uppercase font-bold tracking-widest text-white/20 mb-1">Notes</p>
-                            <p className="text-xs text-white/45 leading-relaxed">{b.notes}</p>
+                          {/* Details grid */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3">
+                              <p className="text-[10px] uppercase font-bold tracking-widest text-white/20 mb-1">Time</p>
+                              <p className="text-sm font-semibold text-white">
+                                {b.startTime.slice(0, 5)} – {b.endTime.slice(0, 5)}
+                              </p>
+                            </div>
+                            <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3">
+                              <p className="text-[10px] uppercase font-bold tracking-widest text-white/20 mb-1">Total</p>
+                              <p className="text-sm font-bold text-white">{fmt(b.totalPrice)}</p>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    ))}
+
+                          {/* Contact info */}
+                          <div className="bg-white/[0.03] border border-white/[0.05] rounded-xl p-3 space-y-0.5">
+                            <p className="text-[10px] uppercase font-bold tracking-widest text-white/20 mb-1.5">Booked as</p>
+                            <p className="text-xs text-white/70 font-medium">{b.userName}</p>
+                            <p className="text-xs text-white/40">{b.userEmail}</p>
+                            {b.userPhone && <p className="text-xs text-white/40">{b.userPhone}</p>}
+                          </div>
+
+                          {b.notes && (
+                            <div className="bg-white/[0.02] border border-white/[0.04] rounded-xl px-3 py-2.5">
+                              <p className="text-[10px] uppercase font-bold tracking-widest text-white/20 mb-1">Notes</p>
+                              <p className="text-xs text-white/45 leading-relaxed">{b.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Footer: book another */}
