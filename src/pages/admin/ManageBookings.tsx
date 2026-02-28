@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import {
   Search, ChevronDown, Loader2, CalendarDays,
   CheckCircle2, XCircle, Clock, Users, Banknote,
-  AlertTriangle, RefreshCw,
+  AlertTriangle, RefreshCw, Plus
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { bookingService } from "@/features/bookings/services/booking.service";
 import { Booking, BookingStatus } from "@/features/bookings/types";
+import { AdminCreateBookingModal } from "@/features/bookings/components/AdminCreateBookingModal";
 
 // ─── constants ───────────────────────────────────────────────────────────────
 
@@ -82,8 +83,8 @@ function StatusMenu({
                   }`}
               >
                 <span className={`mr-2 h-1.5 w-1.5 rounded-full ${s === "pending" ? "bg-yellow-400" :
-                    s === "confirmed" ? "bg-green-400" :
-                      s === "cancelled" ? "bg-red-400" : "bg-blue-400"
+                  s === "confirmed" ? "bg-green-400" :
+                    s === "cancelled" ? "bg-red-400" : "bg-blue-400"
                   }`} />
                 {s}
                 {s === booking.status && <CheckCircle2 size={11} className="ml-auto text-white/40" />}
@@ -197,6 +198,7 @@ const ManageBookings = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "all">("all");
   const [selected, setSelected] = useState<Booking | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -240,14 +242,23 @@ const ManageBookings = () => {
             {bookings.length} booking{bookings.length !== 1 ? "s" : ""} total
           </p>
         </div>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="flex items-center gap-2 h-10 px-4 rounded-xl bg-white/[0.05] border border-white/[0.08] text-sm text-white/60 hover:text-white hover:border-white/20 transition-all"
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-          Refresh
-        </button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-sm text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/20 transition-all font-semibold shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
+          >
+            <Plus size={16} strokeWidth={2.5} />
+            Create Booking
+          </button>
+          <button
+            onClick={load}
+            disabled={loading}
+            className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-white/[0.05] border border-white/[0.08] text-sm text-white/60 hover:text-white hover:border-white/20 transition-all shrink-0"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Stat cards */}
@@ -368,13 +379,22 @@ const ManageBookings = () => {
         </div>
       )}
 
-      {/* Detail panel */}
+      {/* Modals */}
       <AnimatePresence>
         {selected && (
           <BookingDetailPanel
             booking={selected}
             onClose={() => setSelected(null)}
             onUpdated={(b) => { updateBooking(b); setSelected(null); }}
+          />
+        )}
+        {showCreateModal && (
+          <AdminCreateBookingModal
+            onClose={() => setShowCreateModal(false)}
+            onSuccess={() => {
+              setShowCreateModal(false);
+              load();
+            }}
           />
         )}
       </AnimatePresence>

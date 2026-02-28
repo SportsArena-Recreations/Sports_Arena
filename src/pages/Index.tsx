@@ -90,7 +90,7 @@ const Index = () => {
               <Link to="/facilities" className="w-full sm:w-auto">
                 <GlitchButton hero>
                   <span className="flex items-center">
-                    Book a Facility <ArrowRight size={16} className="ml-3" />
+                    Book Arena <ArrowRight size={16} className="ml-3" />
                   </span>
                 </GlitchButton>
               </Link>
