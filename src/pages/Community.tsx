@@ -818,7 +818,7 @@ const FILTERS: PostFilter[] = ["All", "Tournament", "Discussion", "Question", "A
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 export default function Community() {
-    const { user, fullName } = useAuth();
+    const { user, fullName, isAdmin } = useAuth();
 
     const [posts, setPosts] = useState<DBPost[]>([]);
     const [loading, setLoading] = useState(true);
@@ -960,13 +960,16 @@ export default function Community() {
                                     className="w-full bg-white/[0.05] border border-white/[0.10] rounded-2xl pl-11 pr-4 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/25 focus:bg-white/[0.07] transition-all"
                                 />
                             </div>
-                            <button
-                                onClick={() => user ? setShowCreate(true) : (window.location.href = "/login")}
-                                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-black text-sm font-bold tracking-wide hover:bg-white/90 transition-all flex-shrink-0"
-                            >
-                                <Plus size={15} strokeWidth={2.5} />
-                                {user ? "Create Post" : "Sign in to Post"}
-                            </button>
+                            {/* Only admins see the Create Post button */}
+                            {isAdmin && (
+                                <button
+                                    onClick={() => setShowCreate(true)}
+                                    className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-black text-sm font-bold tracking-wide hover:bg-white/90 transition-all flex-shrink-0"
+                                >
+                                    <Plus size={15} strokeWidth={2.5} />
+                                    Create Post
+                                </button>
+                            )}
                         </div>
 
                         {/* Filter tabs */}
