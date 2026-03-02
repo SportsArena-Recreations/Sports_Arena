@@ -1,275 +1,30 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    Search, Plus, X, Heart, MessageCircle, Share2, ChevronRight,
+    Search, Plus, X, Heart, MessageCircle, Share2, ChevronRight, ChevronDown,
     Trophy, HelpCircle, MessageSquare, Megaphone, Flame, Calendar,
-    Users, Send, ThumbsUp, CornerDownRight, ArrowUpDown, Filter,
+    Users, Send, ThumbsUp, CornerDownRight, ArrowUpDown, Filter, Loader2, AlertCircle,
 } from "lucide-react";
 import { Footer } from "@/components/layout/Footer";
+import { useAuth } from "@/context/AuthContext";
+import {
+    type DBPost,
+    type DBComment,
+    type PostCategory,
+    fetchPosts,
+    fetchPostLikes,
+    createPost,
+    togglePostLike,
+    fetchComments,
+    fetchCommentLikes,
+    addComment,
+    toggleCommentLike,
+    fetchMemberCount,
+    getAvatarColor,
+    formatRelativeTime,
+} from "@/services/communityService";
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
-type PostCategory = "Tournament" | "Discussion" | "Question" | "Announcement";
-type PostFilter = "All" | PostCategory;
-
-interface Comment {
-    id: string;
-    author: string;
-    avatarColor: string;
-    time: string;
-    content: string;
-    likes: number;
-    liked: boolean;
-    replies?: Comment[];
-}
-
-interface Post {
-    id: string;
-    author: string;
-    avatarColor: string;
-    time: string;
-    category: PostCategory;
-    title: string;
-    content: string;
-    likes: number;
-    liked: boolean;
-    comments: Comment[];
-    tournamentLink?: string;
-    tournamentDate?: string;
-    pinned?: boolean;
-}
-
-// ─── Mock Data ─────────────────────────────────────────────────────────────────
-const POSTS: Post[] = [
-    {
-        id: "p1",
-        author: "Arena Admin",
-        avatarColor: "bg-orange-500",
-        time: "2h ago",
-        category: "Tournament",
-        title: "Registration for Abuja Open ends Friday!",
-        content:
-            "Don't miss your chance to compete in the biggest tennis tournament of the season. Registration closes this Friday at midnight. Spots are filling up fast — over 80 players already signed up! Prizes include trophies, medals, and cash rewards for top 3 finishers.",
-        likes: 47,
-        liked: false,
-        tournamentLink: "/tournaments",
-        tournamentDate: "March 15, 2026",
-        pinned: true,
-        comments: [
-            {
-                id: "c1",
-                author: "Emeka O.",
-                avatarColor: "bg-blue-500",
-                time: "1h ago",
-                content: "Just registered! Can't wait to compete 🎾",
-                likes: 12,
-                liked: false,
-                replies: [
-                    {
-                        id: "c1r1",
-                        author: "Arena Admin",
-                        avatarColor: "bg-orange-500",
-                        time: "55m ago",
-                        content: "Welcome Emeka! See you on the court 🏆",
-                        likes: 5,
-                        liked: false,
-                    },
-                ],
-            },
-            {
-                id: "c2",
-                author: "Fatima B.",
-                avatarColor: "bg-purple-500",
-                time: "45m ago",
-                content: "Is there a beginner category or is it open level only?",
-                likes: 8,
-                liked: false,
-                replies: [
-                    {
-                        id: "c2r1",
-                        author: "Arena Admin",
-                        avatarColor: "bg-orange-500",
-                        time: "40m ago",
-                        content: "Yes! We have Beginner, Intermediate, and Open divisions. You can select your level during registration.",
-                        likes: 11,
-                        liked: false,
-                    },
-                ],
-            },
-            {
-                id: "c3",
-                author: "Chidi A.",
-                avatarColor: "bg-green-600",
-                time: "30m ago",
-                content: "Will there be livestreaming for the finals?",
-                likes: 6,
-                liked: false,
-            },
-        ],
-    },
-    {
-        id: "p2",
-        author: "Tunde K.",
-        avatarColor: "bg-blue-500",
-        time: "4h ago",
-        category: "Discussion",
-        title: "Who's playing this weekend at Central Court?",
-        content:
-            "Looking to get a good doubles game going this Saturday afternoon around 3pm. Anyone free? We already have two players — need two more to complete the set. Central Court is booked 3–5pm. DM me or comment below!",
-        likes: 23,
-        liked: false,
-        comments: [
-            {
-                id: "c4",
-                author: "Ngozi P.",
-                avatarColor: "bg-pink-500",
-                time: "3h ago",
-                content: "I'm in! What's the skill level expectation?",
-                likes: 7,
-                liked: false,
-                replies: [
-                    {
-                        id: "c4r1",
-                        author: "Tunde K.",
-                        avatarColor: "bg-blue-500",
-                        time: "3h ago",
-                        content: "Intermediate friendly — all are welcome as long as you're having fun 😄",
-                        likes: 4,
-                        liked: false,
-                    },
-                ],
-            },
-            {
-                id: "c5",
-                author: "Dele M.",
-                avatarColor: "bg-teal-500",
-                time: "2h ago",
-                content: "Count me in! Bringing my own racket.",
-                likes: 3,
-                liked: false,
-            },
-        ],
-    },
-    {
-        id: "p3",
-        author: "Adaeze N.",
-        avatarColor: "bg-purple-500",
-        time: "8h ago",
-        category: "Question",
-        title: "What's the best beginner training plan?",
-        content:
-            "I'm fairly new to badminton and want to get serious about improving. I've been playing casually for about 3 months. What training plans or routines do you recommend? Are there coaches at this facility? Any advice from more experienced players would be really appreciated!",
-        likes: 31,
-        liked: false,
-        comments: [
-            {
-                id: "c6",
-                author: "Coach Samuel",
-                avatarColor: "bg-amber-500",
-                time: "7h ago",
-                content: "Start with footwork drills 3x a week, light rally sessions, and focus on form over power. I offer beginner sessions every Tuesday and Thursday 6–8pm.",
-                likes: 18,
-                liked: false,
-            },
-            {
-                id: "c7",
-                author: "Kemi L.",
-                avatarColor: "bg-rose-500",
-                time: "6h ago",
-                content: "YouTube channels like Badminton Famly are gold for beginners. Also, join the Sunday casual group — super welcoming crowd!",
-                likes: 12,
-                liked: false,
-            },
-            {
-                id: "c8",
-                author: "Victor O.",
-                avatarColor: "bg-indigo-500",
-                time: "5h ago",
-                content: "Consistency is key. Even 30 minutes of dedicated practice daily beats 2 hours once a week.",
-                likes: 9,
-                liked: false,
-            },
-        ],
-    },
-    {
-        id: "p4",
-        author: "Arena Admin",
-        avatarColor: "bg-orange-500",
-        time: "1d ago",
-        category: "Announcement",
-        title: "New facility hours starting March 1st",
-        content:
-            "We're extending our opening hours starting March 1st! The facility will now be open Monday–Sunday from 6:00 AM to 11:00 PM. Early morning slots (6–8 AM) are available at a discounted rate. Book via the Facilities page.",
-        likes: 89,
-        liked: false,
-        comments: [
-            {
-                id: "c9",
-                author: "Ibrahim T.",
-                avatarColor: "bg-cyan-600",
-                time: "22h ago",
-                content: "Finally! Early morning sessions are perfect before work 🙌",
-                likes: 21,
-                liked: false,
-            },
-            {
-                id: "c10",
-                author: "Blessing A.",
-                avatarColor: "bg-violet-500",
-                time: "20h ago",
-                content: "What about weekend pricing? Will it remain the same?",
-                likes: 8,
-                liked: false,
-            },
-        ],
-    },
-    {
-        id: "p5",
-        author: "Obinna C.",
-        avatarColor: "bg-green-600",
-        time: "2d ago",
-        category: "Discussion",
-        title: "Best clay courts in town — your rankings?",
-        content:
-            "Been trying out a few facilities across the city and I think ours has some of the best maintained clay courts. What do others think? Anyone played at different venues recently and have comparisons? Let's settle the debate 😂",
-        likes: 15,
-        liked: false,
-        comments: [
-            {
-                id: "c11",
-                author: "Sade F.",
-                avatarColor: "bg-lime-600",
-                time: "1d ago",
-                content: "100% agree — the maintenance here is top tier. Other courts I've tried are noticeably worse.",
-                likes: 6,
-                liked: false,
-            },
-        ],
-    },
-    {
-        id: "p6",
-        author: "Yomi A.",
-        avatarColor: "bg-red-500",
-        time: "3d ago",
-        category: "Question",
-        title: "Looking for doubles partner — Abuja League",
-        content:
-            "My regular partner just moved cities and I need a new doubles partner for the Abuja League starting next month. I'm a solid intermediate player, consistent backhand, strong net game. Anyone interested? We'd train twice a week and compete on weekends.",
-        likes: 19,
-        liked: false,
-        comments: [
-            {
-                id: "c12",
-                author: "Chukwu D.",
-                avatarColor: "bg-sky-500",
-                time: "2d ago",
-                content: "Interested! DM me your contact — intermediate level here too.",
-                likes: 4,
-                liked: false,
-            },
-        ],
-    },
-];
-
+// ─── Static sidebar data ───────────────────────────────────────────────────────
 const TRENDING = [
     "Abuja League Finals",
     "Best clay courts in town",
@@ -284,20 +39,12 @@ const UPCOMING = [
     { name: "Indoor Soccer League", date: "Feb 25, 2026", sport: "Soccer" },
 ];
 
-const ACTIVE_MEMBERS = [
-    { name: "Emeka O.", color: "bg-blue-500" },
-    { name: "Fatima B.", color: "bg-purple-500" },
-    { name: "Coach Samuel", color: "bg-amber-500" },
-    { name: "Ngozi P.", color: "bg-pink-500" },
-    { name: "Tunde K.", color: "bg-teal-500" },
-    { name: "Kemi L.", color: "bg-rose-500" },
-    { name: "Victor O.", color: "bg-indigo-500" },
-];
-
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 function getInitials(name: string) {
     return name.trim().split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 }
+
+type PostFilter = "All" | PostCategory;
 
 const CATEGORY_META: Record<PostCategory, { icon: React.ElementType; color: string; bg: string; border: string }> = {
     Tournament: { icon: Trophy, color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/25" },
@@ -328,33 +75,71 @@ function CategoryTag({ category }: { category: PostCategory }) {
     );
 }
 
-// ─── Comment Thread ────────────────────────────────────────────────────────────
+// ─── Comment Item ──────────────────────────────────────────────────────────────
 function CommentItem({
     comment,
+    postId,
+    postAuthorId,
+    userId,
+    userFullName,
+    userAvatarColor,
     nested = false,
+    onReply,
 }: {
-    comment: Comment;
+    comment: DBComment;
+    postId: string;
+    postAuthorId: string;
+    userId?: string;
+    userFullName?: string | null;
+    userAvatarColor?: string;
     nested?: boolean;
+    onReply?: (parentId: string, content: string) => Promise<void>;
 }) {
-    const [liked, setLiked] = useState(comment.liked);
-    const [likes, setLikes] = useState(comment.likes);
-    const [showReplyBox, setShowReplyBox] = useState(false);
+    const isAuthor = comment.author_id === postAuthorId;
+    const [liked, setLiked] = useState(comment.liked ?? false);
+    const [likes, setLikes] = useState(comment.likes_count);
+    const [showReply, setShowReply] = useState(false);
+    const [replyText, setReplyText] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const [showReplies, setShowReplies] = useState(true);
 
-    const handleLike = () => {
-        setLiked((l) => {
-            setLikes((c) => (l ? c - 1 : c + 1));
-            return !l;
-        });
+    const replyCount = comment.replies?.length ?? 0;
+
+    const handleLike = async () => {
+        if (!userId) return;
+        const next = !liked;
+        setLiked(next);
+        setLikes((c) => (next ? c + 1 : Math.max(c - 1, 0)));
+        try {
+            await toggleCommentLike(comment.id, userId, !next);
+        } catch {
+            setLiked(!next);
+            setLikes((c) => (!next ? c + 1 : Math.max(c - 1, 0)));
+        }
+    };
+
+    const submitReply = async () => {
+        if (!replyText.trim() || !onReply) return;
+        setSubmitting(true);
+        await onReply(comment.id, replyText.trim());
+        setReplyText("");
+        setShowReply(false);
+        setSubmitting(false);
     };
 
     return (
         <div className={`flex gap-3 ${nested ? "pl-8 mt-3" : ""}`}>
-            <Avatar name={comment.author} colorClass={comment.avatarColor} size="sm" />
+            <Avatar name={comment.author_name} colorClass={comment.avatar_color} size="sm" />
             <div className="flex-1 min-w-0">
-                <div className="bg-white/[0.04] rounded-2xl px-4 py-3 border border-white/[0.06]">
-                    <div className="flex items-center gap-2 mb-1.5">
-                        <span className="text-sm font-semibold text-white/90">{comment.author}</span>
-                        <span className="text-[10px] text-white/30">{comment.time}</span>
+                <div className={`bg-white/[0.04] rounded-2xl px-4 py-3 border ${isAuthor ? "border-orange-500/20" : "border-white/[0.06]"}`}>
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <span className="text-sm font-semibold text-white/90">{comment.author_name}</span>
+                        {isAuthor && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-widest uppercase bg-orange-500/15 border border-orange-500/30 text-orange-400">
+                                ✍ Author
+                            </span>
+                        )}
+                        <span className="text-[10px] text-white/30">{formatRelativeTime(comment.created_at)}</span>
                     </div>
                     <p className="text-sm text-white/65 leading-relaxed">{comment.content}</p>
                 </div>
@@ -366,9 +151,9 @@ function CommentItem({
                         <ThumbsUp size={11} strokeWidth={2.5} />
                         {likes}
                     </button>
-                    {!nested && (
+                    {!nested && userId && (
                         <button
-                            onClick={() => setShowReplyBox((s) => !s)}
+                            onClick={() => setShowReply((s) => !s)}
                             className="flex items-center gap-1.5 text-xs font-semibold text-white/30 hover:text-white/60 transition-colors"
                         >
                             <CornerDownRight size={11} strokeWidth={2.5} />
@@ -376,40 +161,182 @@ function CommentItem({
                         </button>
                     )}
                 </div>
-                {showReplyBox && (
-                    <div className="mt-2 pl-0 flex gap-2">
+
+                {showReply && userId && (
+                    <div className="mt-2 flex gap-2">
                         <input
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && submitReply()}
                             placeholder="Write a reply…"
                             className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20 transition-colors"
                         />
-                        <button className="px-3 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white/60 hover:text-white transition-all">
-                            <Send size={13} />
+                        <button
+                            onClick={submitReply}
+                            disabled={submitting || !replyText.trim()}
+                            className="px-3 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white/60 hover:text-white transition-all disabled:opacity-30"
+                        >
+                            {submitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
                         </button>
                     </div>
                 )}
-                {comment.replies?.map((r) => (
-                    <CommentItem key={r.id} comment={r} nested />
-                ))}
+
+                {replyCount > 0 && (
+                    <button
+                        onClick={() => setShowReplies((s) => !s)}
+                        className="flex items-center gap-1.5 mt-2 px-2 text-xs font-semibold text-white/35 hover:text-white/70 transition-colors"
+                    >
+                        <motion.span
+                            animate={{ rotate: showReplies ? 0 : -90 }}
+                            transition={{ duration: 0.2 }}
+                            className="inline-flex"
+                        >
+                            <ChevronDown size={12} strokeWidth={2.5} />
+                        </motion.span>
+                        {showReplies
+                            ? `Hide ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`
+                            : `Show ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`}
+                    </button>
+                )}
+
+                <AnimatePresence initial={false}>
+                    {showReplies && replyCount > 0 && (
+                        <motion.div
+                            key="replies"
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                            style={{ overflow: "hidden" }}
+                        >
+                            {comment.replies!.map((r) => (
+                                <CommentItem
+                                    key={r.id}
+                                    comment={r}
+                                    postId={postId}
+                                    postAuthorId={postAuthorId}
+                                    userId={userId}
+                                    userFullName={userFullName}
+                                    userAvatarColor={userAvatarColor}
+                                    nested
+                                />
+                            ))}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     );
 }
 
 // ─── Discussion Modal ──────────────────────────────────────────────────────────
-function DiscussionModal({ post, onClose }: { post: Post; onClose: () => void }) {
-    const [sortComments, setSortComments] = useState<"newest" | "top">("top");
-    const [liked, setLiked] = useState(post.liked);
-    const [likes, setLikes] = useState(post.likes);
+function DiscussionModal({
+    post,
+    onClose,
+    userId,
+    userFullName,
+    userAvatarColor,
+    onLikePost,
+}: {
+    post: DBPost;
+    onClose: () => void;
+    userId?: string;
+    userFullName?: string | null;
+    userAvatarColor?: string;
+    onLikePost: (postId: string, liked: boolean) => void;
+}) {
+    const [liked, setLiked] = useState(post.liked ?? false);
+    const [likes, setLikes] = useState(post.likes_count);
     const [newComment, setNewComment] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const [comments, setComments] = useState<DBComment[]>([]);
+    const [loadingComments, setLoadingComments] = useState(true);
+    const [sortComments, setSortComments] = useState<"newest" | "top">("top");
     const meta = CATEGORY_META[post.category];
 
-    const sorted = [...post.comments].sort((a, b) =>
-        sortComments === "top" ? b.likes - a.likes : 0
-    );
+    // Load comments + their liked state
+    useEffect(() => {
+        let cancelled = false;
+        setLoadingComments(true);
+        fetchComments(post.id).then(async (rows) => {
+            if (cancelled) return;
+            if (userId) {
+                const liked = await fetchCommentLikes(userId, post.id);
+                const withLiked = applyLikesToComments(rows, liked);
+                if (!cancelled) setComments(withLiked);
+            } else {
+                if (!cancelled) setComments(rows);
+            }
+            if (!cancelled) setLoadingComments(false);
+        });
+        return () => { cancelled = true; };
+    }, [post.id, userId]);
 
-    const handleLike = () => {
-        setLiked((l) => { setLikes((c) => (l ? c - 1 : c + 1)); return !l; });
+    function applyLikesToComments(rows: DBComment[], likedSet: Set<string>): DBComment[] {
+        return rows.map((c) => ({
+            ...c,
+            liked: likedSet.has(c.id),
+            replies: c.replies?.map((r) => ({ ...r, liked: likedSet.has(r.id) })),
+        }));
+    }
+
+    const handleLike = async () => {
+        if (!userId) return;
+        const next = !liked;
+        setLiked(next);
+        setLikes((c) => (next ? c + 1 : Math.max(c - 1, 0)));
+        onLikePost(post.id, next);
+        try {
+            await togglePostLike(post.id, userId, !next);
+        } catch {
+            setLiked(!next);
+            setLikes((c) => (!next ? c + 1 : Math.max(c - 1, 0)));
+            onLikePost(post.id, !next);
+        }
     };
+
+    const submitComment = async () => {
+        if (!newComment.trim() || !userId || !userFullName) return;
+        setSubmitting(true);
+        try {
+            const added = await addComment({
+                postId: post.id,
+                authorId: userId,
+                authorName: userFullName,
+                avatarColor: userAvatarColor ?? "bg-blue-500",
+                content: newComment.trim(),
+            });
+            setComments((prev) => [...prev, { ...added, replies: [] }]);
+            setNewComment("");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleReply = async (parentId: string, content: string) => {
+        if (!userId || !userFullName) return;
+        const added = await addComment({
+            postId: post.id,
+            parentId,
+            authorId: userId,
+            authorName: userFullName,
+            avatarColor: userAvatarColor ?? "bg-blue-500",
+            content,
+        });
+        setComments((prev) =>
+            prev.map((c) =>
+                c.id === parentId
+                    ? { ...c, replies: [...(c.replies ?? []), added] }
+                    : c
+            )
+        );
+    };
+
+    const sortedComments = useMemo(() => {
+        return [...comments].sort((a, b) =>
+            sortComments === "top" ? b.likes_count - a.likes_count : 0
+        );
+    }, [comments, sortComments]);
 
     return (
         <motion.div
@@ -432,11 +359,11 @@ function DiscussionModal({ post, onClose }: { post: Post; onClose: () => void })
                 <div className={`px-5 pt-5 pb-4 sm:px-6 sm:pt-6 border-b border-white/[0.06] flex-shrink-0 ${meta.bg}`}>
                     <div className="flex items-start gap-4 justify-between">
                         <div className="flex gap-3 flex-1 min-w-0">
-                            <Avatar name={post.author} colorClass={post.avatarColor} size="lg" />
+                            <Avatar name={post.author_name} colorClass={post.avatar_color} size="lg" />
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                    <span className="text-sm font-semibold text-white/80">{post.author}</span>
-                                    <span className="text-[10px] text-white/30">{post.time}</span>
+                                    <span className="text-sm font-semibold text-white/80">{post.author_name}</span>
+                                    <span className="text-[10px] text-white/30">{formatRelativeTime(post.created_at)}</span>
                                     <CategoryTag category={post.category} />
                                 </div>
                                 <h2 className="text-lg font-bold text-white leading-snug tracking-tight">{post.title}</h2>
@@ -452,36 +379,35 @@ function DiscussionModal({ post, onClose }: { post: Post; onClose: () => void })
                 </div>
 
                 {/* Scrollable body */}
-                <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6 space-y-6">
-                    {/* Full post content */}
+                <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6 space-y-6 custom-scroll-hover">
                     <div>
                         <p className="text-sm text-white/65 leading-relaxed">{post.content}</p>
-                        {post.tournamentDate && (
+                        {post.tournament_date && (
                             <div className="mt-3 flex items-center gap-2 text-xs text-white/40">
                                 <Calendar size={12} />
-                                <span>Tournament date: <strong className="text-white/70">{post.tournamentDate}</strong></span>
+                                <span>Tournament date: <strong className="text-white/70">{post.tournament_date}</strong></span>
                             </div>
                         )}
-                        {/* Like / comment row */}
                         <div className="flex items-center gap-5 mt-4 pt-4 border-t border-white/[0.06]">
                             <button
                                 onClick={handleLike}
-                                className={`flex items-center gap-2 text-sm font-semibold transition-colors ${liked ? "text-rose-400" : "text-white/40 hover:text-white/70"}`}
+                                title={userId ? undefined : "Sign in to like"}
+                                className={`flex items-center gap-2 text-sm font-semibold transition-colors ${liked ? "text-rose-400" : "text-white/40 hover:text-white/70"} ${!userId ? "opacity-50 cursor-not-allowed" : ""}`}
                             >
                                 <Heart size={15} strokeWidth={2} fill={liked ? "currentColor" : "none"} />
                                 {likes}
                             </button>
                             <span className="flex items-center gap-2 text-sm text-white/40">
                                 <MessageCircle size={15} strokeWidth={2} />
-                                {post.comments.length}
+                                {comments.length}
                             </span>
                         </div>
                     </div>
 
-                    {/* Comment sort */}
+                    {/* Sort */}
                     <div className="flex items-center justify-between">
                         <h3 className="text-[10px] font-bold tracking-widest uppercase text-white/40">
-                            {post.comments.length} Comments
+                            {comments.length} Comments
                         </h3>
                         <div className="flex gap-1">
                             {(["top", "newest"] as const).map((s) => (
@@ -499,33 +425,58 @@ function DiscussionModal({ post, onClose }: { post: Post; onClose: () => void })
                         </div>
                     </div>
 
-                    {/* Comments */}
-                    <div className="space-y-5">
-                        {sorted.map((c) => (
-                            <CommentItem key={c.id} comment={c} />
-                        ))}
-                    </div>
+                    {/* Comments list */}
+                    {loadingComments ? (
+                        <div className="flex justify-center py-8">
+                            <Loader2 size={20} className="animate-spin text-white/30" />
+                        </div>
+                    ) : (
+                        <div className="space-y-5">
+                            {sortedComments.length === 0 ? (
+                                <p className="text-sm text-white/25 text-center py-6">No comments yet. Be the first!</p>
+                            ) : (
+                                sortedComments.map((c) => (
+                                    <CommentItem
+                                        key={c.id}
+                                        comment={c}
+                                        postId={post.id}
+                                        postAuthorId={post.author_id}
+                                        userId={userId}
+                                        userFullName={userFullName}
+                                        userAvatarColor={userAvatarColor}
+                                        onReply={handleReply}
+                                    />
+                                ))
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Comment input footer */}
                 <div className="flex-shrink-0 px-5 py-4 sm:px-6 border-t border-white/[0.06] bg-black/30">
-                    <div className="flex gap-3 items-center">
-                        <div className="w-8 h-8 rounded-full bg-white/10 flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white/50">
-                            Me
+                    {userId ? (
+                        <div className="flex gap-3 items-center">
+                            <Avatar name={userFullName ?? "Me"} colorClass={userAvatarColor ?? "bg-white/10"} size="sm" />
+                            <input
+                                value={newComment}
+                                onChange={(e) => setNewComment(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && submitComment()}
+                                placeholder="Add a comment…"
+                                className="flex-1 bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20 transition-colors"
+                            />
+                            <button
+                                onClick={submitComment}
+                                disabled={!newComment.trim() || submitting}
+                                className="px-4 py-2.5 rounded-xl bg-white text-black text-xs font-bold uppercase tracking-widest hover:bg-white/90 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+                            >
+                                {submitting ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                            </button>
                         </div>
-                        <input
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                            placeholder="Add a comment…"
-                            className="flex-1 bg-white/[0.05] border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20 transition-colors"
-                        />
-                        <button
-                            disabled={!newComment.trim()}
-                            className="px-4 py-2.5 rounded-xl bg-white text-black text-xs font-bold uppercase tracking-widest hover:bg-white/90 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
-                        >
-                            <Send size={13} />
-                        </button>
-                    </div>
+                    ) : (
+                        <p className="text-sm text-white/30 text-center">
+                            <a href="/login" className="text-white/60 underline hover:text-white transition-colors">Sign in</a> to join the discussion
+                        </p>
+                    )}
                 </div>
             </motion.div>
         </motion.div>
@@ -533,14 +484,35 @@ function DiscussionModal({ post, onClose }: { post: Post; onClose: () => void })
 }
 
 // ─── Post Card ─────────────────────────────────────────────────────────────────
-function PostCard({ post, onOpen }: { post: Post; onOpen: () => void }) {
-    const [liked, setLiked] = useState(post.liked);
-    const [likes, setLikes] = useState(post.likes);
+function PostCard({
+    post,
+    onOpen,
+    userId,
+    onLike,
+}: {
+    post: DBPost;
+    onOpen: () => void;
+    userId?: string;
+    onLike: (postId: string, liked: boolean) => void;
+}) {
+    const [liked, setLiked] = useState(post.liked ?? false);
+    const [likes, setLikes] = useState(post.likes_count);
     const meta = CATEGORY_META[post.category];
 
-    const handleLike = (e: React.MouseEvent) => {
+    const handleLike = async (e: React.MouseEvent) => {
         e.stopPropagation();
-        setLiked((l) => { setLikes((c) => (l ? c - 1 : c + 1)); return !l; });
+        if (!userId) return;
+        const next = !liked;
+        setLiked(next);
+        setLikes((c) => (next ? c + 1 : Math.max(c - 1, 0)));
+        onLike(post.id, next);
+        try {
+            await togglePostLike(post.id, userId, !next);
+        } catch {
+            setLiked(!next);
+            setLikes((c) => (!next ? c + 1 : Math.max(c - 1, 0)));
+            onLike(post.id, !next);
+        }
     };
 
     return (
@@ -551,7 +523,6 @@ function PostCard({ post, onOpen }: { post: Post; onOpen: () => void }) {
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             className="group relative bg-[#06060a] border border-white/[0.07] rounded-2xl overflow-hidden hover:border-white/[0.13] transition-all duration-300"
         >
-            {/* accent glow */}
             <div className={`absolute top-0 right-0 w-48 h-48 blur-[80px] opacity-10 pointer-events-none ${meta.bg}`} />
 
             {post.pinned && (
@@ -563,13 +534,12 @@ function PostCard({ post, onOpen }: { post: Post; onOpen: () => void }) {
             )}
 
             <div className="p-5 sm:p-6">
-                {/* Header */}
                 <div className="flex items-start gap-3 mb-3">
-                    <Avatar name={post.author} colorClass={post.avatarColor} />
+                    <Avatar name={post.author_name} colorClass={post.avatar_color} />
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold text-white/85">{post.author}</span>
-                            <span className="text-[10px] text-white/30">{post.time}</span>
+                            <span className="text-sm font-semibold text-white/85">{post.author_name}</span>
+                            <span className="text-[10px] text-white/30">{formatRelativeTime(post.created_at)}</span>
                         </div>
                         <div className="mt-1">
                             <CategoryTag category={post.category} />
@@ -577,32 +547,32 @@ function PostCard({ post, onOpen }: { post: Post; onOpen: () => void }) {
                     </div>
                 </div>
 
-                {/* Body */}
                 <h3 className="text-base font-bold text-white leading-snug mb-2 tracking-tight">{post.title}</h3>
                 <p className="text-sm text-white/50 leading-relaxed line-clamp-3">{post.content}</p>
 
-                {/* Tournament meta */}
-                {post.tournamentDate && (
+                {post.tournament_date && (
                     <div className="mt-3 flex items-center gap-4 flex-wrap">
                         <span className="flex items-center gap-1.5 text-xs text-white/40">
                             <Calendar size={11} />
-                            {post.tournamentDate}
+                            {post.tournament_date}
                         </span>
-                        <a
-                            href={post.tournamentLink}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors underline underline-offset-2"
-                        >
-                            View Tournament →
-                        </a>
+                        {post.tournament_link && (
+                            <a
+                                href={post.tournament_link}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors underline underline-offset-2"
+                            >
+                                View Tournament →
+                            </a>
+                        )}
                     </div>
                 )}
 
-                {/* Footer */}
                 <div className="flex items-center gap-4 mt-4 pt-4 border-t border-white/[0.05]">
                     <button
                         onClick={handleLike}
-                        className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${liked ? "text-rose-400" : "text-white/35 hover:text-white/70"}`}
+                        title={userId ? undefined : "Sign in to like"}
+                        className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${liked ? "text-rose-400" : "text-white/35 hover:text-white/70"} ${!userId ? "opacity-50 cursor-not-allowed" : ""}`}
                     >
                         <Heart size={13} strokeWidth={2} fill={liked ? "currentColor" : "none"} />
                         {likes}
@@ -612,7 +582,7 @@ function PostCard({ post, onOpen }: { post: Post; onOpen: () => void }) {
                         className="flex items-center gap-1.5 text-xs font-semibold text-white/35 hover:text-white/70 transition-colors"
                     >
                         <MessageCircle size={13} strokeWidth={2} />
-                        {post.comments.length}
+                        {post.comments_count}
                     </button>
                     <button className="flex items-center gap-1.5 text-xs font-semibold text-white/35 hover:text-white/70 transition-colors ml-auto">
                         <Share2 size={13} strokeWidth={2} />
@@ -632,9 +602,27 @@ function PostCard({ post, onOpen }: { post: Post; onOpen: () => void }) {
 }
 
 // ─── Sidebar ───────────────────────────────────────────────────────────────────
-function Sidebar() {
+function Sidebar({ memberCount, postCount }: { memberCount: number; postCount: number }) {
     return (
         <aside className="hidden lg:flex flex-col gap-5 w-[300px] flex-shrink-0">
+            {/* Community Stats */}
+            <div className="bg-[#06060a] border border-white/[0.07] rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-4">
+                    <Users size={14} className="text-green-400" strokeWidth={2} />
+                    <h3 className="text-xs font-bold tracking-widest uppercase text-white/50">Community Stats</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-3 text-center">
+                        <p className="text-2xl font-black text-white">{memberCount}</p>
+                        <p className="text-[10px] font-bold tracking-widest uppercase text-white/30 mt-0.5">Members</p>
+                    </div>
+                    <div className="bg-white/[0.02] border border-white/[0.05] rounded-xl p-3 text-center">
+                        <p className="text-2xl font-black text-white">{postCount}</p>
+                        <p className="text-[10px] font-bold tracking-widest uppercase text-white/30 mt-0.5">Posts</p>
+                    </div>
+                </div>
+            </div>
+
             {/* Trending Topics */}
             <div className="bg-[#06060a] border border-white/[0.07] rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-4">
@@ -670,44 +658,58 @@ function Sidebar() {
                                 <p className="text-sm font-semibold text-white/85 truncate">{t.name}</p>
                                 <p className="text-[10px] text-white/35 mt-0.5">{t.date} · {t.sport}</p>
                             </div>
-                            <button className="flex-shrink-0 px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/[0.12] transition-all">
+                            <a href="/tournaments" className="flex-shrink-0 px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/[0.12] transition-all">
                                 Join
-                            </button>
+                            </a>
                         </div>
                     ))}
                 </div>
-            </div>
-
-            {/* Active Members */}
-            <div className="bg-[#06060a] border border-white/[0.07] rounded-2xl p-5">
-                <div className="flex items-center gap-2 mb-4">
-                    <Users size={14} className="text-green-400" strokeWidth={2} />
-                    <h3 className="text-xs font-bold tracking-widest uppercase text-white/50">Active Today</h3>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                    {ACTIVE_MEMBERS.map((m) => (
-                        <div key={m.name} className="relative group/avatar">
-                            <div className={`w-9 h-9 rounded-full ${m.color} flex items-center justify-center text-[10px] font-bold text-white shadow-md cursor-pointer hover:scale-110 transition-transform`}>
-                                {getInitials(m.name)}
-                            </div>
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 rounded-lg bg-black/90 border border-white/10 text-[10px] text-white whitespace-nowrap opacity-0 group-hover/avatar:opacity-100 transition-opacity pointer-events-none z-10">
-                                {m.name}
-                            </div>
-                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-green-400 border-2 border-[#06060a]" />
-                        </div>
-                    ))}
-                </div>
-                <p className="text-[10px] text-white/30 mt-3">{ACTIVE_MEMBERS.length} members active in the last hour</p>
             </div>
         </aside>
     );
 }
 
 // ─── Create Post Modal ─────────────────────────────────────────────────────────
-function CreatePostModal({ onClose }: { onClose: () => void }) {
+function CreatePostModal({
+    onClose,
+    onCreated,
+    userId,
+    userFullName,
+    userAvatarColor,
+}: {
+    onClose: () => void;
+    onCreated: (post: DBPost) => void;
+    userId?: string;
+    userFullName?: string | null;
+    userAvatarColor?: string;
+}) {
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
     const [category, setCategory] = useState<PostCategory>("Discussion");
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handlePublish = async () => {
+        if (!title.trim() || !content.trim() || !userId || !userFullName) return;
+        setSubmitting(true);
+        setError(null);
+        try {
+            const post = await createPost({
+                authorId: userId,
+                authorName: userFullName,
+                avatarColor: userAvatarColor ?? "bg-blue-500",
+                category,
+                title: title.trim(),
+                content: content.trim(),
+            });
+            onCreated(post);
+            onClose();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Failed to publish post.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     return (
         <motion.div
@@ -769,6 +771,13 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
                         placeholder="What's on your mind? Share updates, questions, or start a discussion…"
                         className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/20 transition-colors resize-none leading-relaxed"
                     />
+
+                    {error && (
+                        <div className="flex items-center gap-2 text-sm text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl px-4 py-3">
+                            <AlertCircle size={14} />
+                            {error}
+                        </div>
+                    )}
                 </div>
 
                 <div className="px-6 pb-6 flex gap-3 justify-end">
@@ -779,9 +788,11 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
                         Cancel
                     </button>
                     <button
-                        disabled={!title.trim() || !content.trim()}
-                        className="px-6 py-2.5 rounded-xl bg-white text-black text-sm font-bold tracking-widest uppercase hover:bg-white/90 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        onClick={handlePublish}
+                        disabled={!title.trim() || !content.trim() || submitting}
+                        className="px-6 py-2.5 rounded-xl bg-white text-black text-sm font-bold tracking-widest uppercase hover:bg-white/90 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-2"
                     >
+                        {submitting && <Loader2 size={13} className="animate-spin" />}
                         Publish
                     </button>
                 </div>
@@ -790,34 +801,96 @@ function CreatePostModal({ onClose }: { onClose: () => void }) {
     );
 }
 
-// ─── Filter Tabs ────────────────────────────────────────────────────────────────
+// ─── Filter Tabs ───────────────────────────────────────────────────────────────
 const FILTERS: PostFilter[] = ["All", "Tournament", "Discussion", "Question", "Announcement"];
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 export default function Community() {
+    const { user, fullName } = useAuth();
+
+    const [posts, setPosts] = useState<DBPost[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [memberCount, setMemberCount] = useState(0);
     const [search, setSearch] = useState("");
     const [activeFilter, setActiveFilter] = useState<PostFilter>("All");
-    const [openPost, setOpenPost] = useState<Post | null>(null);
+    const [openPost, setOpenPost] = useState<DBPost | null>(null);
     const [showCreate, setShowCreate] = useState(false);
 
-    const totalMembers = 342;
-    const totalPosts = POSTS.length;
+    const userAvatarColor = user ? getAvatarColor(user.id) : "bg-blue-500";
+
+    // ── Load posts + liked state ──
+    const loadPosts = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [rows, count] = await Promise.all([
+                fetchPosts(),
+                fetchMemberCount(),
+            ]);
+
+            if (user) {
+                const likedSet = await fetchPostLikes(user.id);
+                setPosts(rows.map((p) => ({ ...p, liked: likedSet.has(p.id) })));
+            } else {
+                setPosts(rows);
+            }
+
+            setMemberCount(count);
+        } finally {
+            setLoading(false);
+        }
+    }, [user]);
+
+    useEffect(() => {
+        loadPosts();
+    }, [loadPosts]);
+
+    // Keep openPost in sync after a like from the modal
+    const handleModalLike = (postId: string, liked: boolean) => {
+        setPosts((prev) =>
+            prev.map((p) =>
+                p.id === postId
+                    ? { ...p, liked, likes_count: liked ? p.likes_count + 1 : Math.max(p.likes_count - 1, 0) }
+                    : p
+            )
+        );
+        if (openPost?.id === postId) {
+            setOpenPost((prev) =>
+                prev
+                    ? { ...prev, liked, likes_count: liked ? prev.likes_count + 1 : Math.max(prev.likes_count - 1, 0) }
+                    : prev
+            );
+        }
+    };
+
+    const handleCardLike = (postId: string, liked: boolean) => {
+        setPosts((prev) =>
+            prev.map((p) =>
+                p.id === postId
+                    ? { ...p, liked, likes_count: liked ? p.likes_count + 1 : Math.max(p.likes_count - 1, 0) }
+                    : p
+            )
+        );
+    };
+
+    const handlePostCreated = (post: DBPost) => {
+        setPosts((prev) => [{ ...post, liked: false }, ...prev]);
+    };
 
     const filtered = useMemo(() => {
-        return POSTS.filter((p) => {
+        return posts.filter((p) => {
             const matchesFilter = activeFilter === "All" || p.category === activeFilter;
             const q = search.toLowerCase();
             const matchesSearch =
                 !q ||
                 p.title.toLowerCase().includes(q) ||
                 p.content.toLowerCase().includes(q) ||
-                p.author.toLowerCase().includes(q);
+                p.author_name.toLowerCase().includes(q);
             return matchesFilter && matchesSearch;
         });
-    }, [search, activeFilter]);
+    }, [posts, search, activeFilter]);
 
     return (
-        <div className="bg-[#020202] text-white min-h-screen font-sans">
+        <div className="bg-[#020202] text-white min-h-screen font-sans custom-scroll">
             {/* ── Hero ───────────────────────────────────────────────────── */}
             <section className="pt-16 pb-12 px-6 border-b border-white/[0.05] relative overflow-hidden bg-black">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-950/20 via-transparent to-purple-950/20 pointer-events-none" />
@@ -836,7 +909,7 @@ export default function Community() {
                             </span>
                             <span className="text-[10px] font-bold tracking-widest uppercase text-green-400 border border-green-500/30 px-3 py-1 rounded-full bg-green-500/10 flex items-center gap-1.5">
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" />
-                                {ACTIVE_MEMBERS.length} online now
+                                Live
                             </span>
                         </div>
 
@@ -848,9 +921,8 @@ export default function Community() {
                         {/* Quick stats */}
                         <div className="flex justify-center flex-wrap gap-10 sm:gap-20 mb-10">
                             {[
-                                { label: "Members", value: totalMembers },
-                                { label: "Discussions", value: totalPosts },
-                                { label: "Active Today", value: ACTIVE_MEMBERS.length },
+                                { label: "Members", value: memberCount },
+                                { label: "Discussions", value: posts.length },
                             ].map((s) => (
                                 <div key={s.label} className="text-center">
                                     <p className="text-3xl font-black text-white">{s.value}</p>
@@ -871,11 +943,11 @@ export default function Community() {
                                 />
                             </div>
                             <button
-                                onClick={() => setShowCreate(true)}
+                                onClick={() => user ? setShowCreate(true) : (window.location.href = "/login")}
                                 className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-black text-sm font-bold tracking-wide hover:bg-white/90 transition-all flex-shrink-0"
                             >
                                 <Plus size={15} strokeWidth={2.5} />
-                                Create Post
+                                {user ? "Create Post" : "Sign in to Post"}
                             </button>
                         </div>
 
@@ -925,25 +997,41 @@ export default function Community() {
                             </p>
                             <button className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold">
                                 <ArrowUpDown size={11} strokeWidth={2.5} />
-                                Sort: Trending
+                                Sort: Newest
                             </button>
                         </div>
 
-                        {filtered.length === 0 ? (
+                        {/* Loading */}
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                <Loader2 size={28} className="animate-spin text-white/25" />
+                                <p className="text-sm text-white/25">Loading discussions…</p>
+                            </div>
+                        ) : filtered.length === 0 ? (
                             <div className="text-center py-20 text-white/25">
                                 <MessageSquare size={40} className="mx-auto mb-4 opacity-30" />
-                                <p className="text-sm font-semibold">No posts found</p>
-                                <p className="text-xs mt-1">Try a different search or filter</p>
+                                <p className="text-sm font-semibold">
+                                    {posts.length === 0 ? "No posts yet — be the first!" : "No posts found"}
+                                </p>
+                                <p className="text-xs mt-1">
+                                    {posts.length === 0 ? "Create a post to start the conversation." : "Try a different search or filter"}
+                                </p>
                             </div>
                         ) : (
                             filtered.map((p) => (
-                                <PostCard key={p.id} post={p} onOpen={() => setOpenPost(p)} />
+                                <PostCard
+                                    key={p.id}
+                                    post={p}
+                                    onOpen={() => setOpenPost(p)}
+                                    userId={user?.id}
+                                    onLike={handleCardLike}
+                                />
                             ))
                         )}
                     </div>
 
                     {/* Sidebar */}
-                    <Sidebar />
+                    <Sidebar memberCount={memberCount} postCount={posts.length} />
                 </div>
             </section>
 
@@ -951,8 +1039,27 @@ export default function Community() {
 
             {/* ── Modals ─────────────────────────────────────────────────── */}
             <AnimatePresence>
-                {openPost && <DiscussionModal key="discussion" post={openPost} onClose={() => setOpenPost(null)} />}
-                {showCreate && <CreatePostModal key="create" onClose={() => setShowCreate(false)} />}
+                {openPost && (
+                    <DiscussionModal
+                        key="discussion"
+                        post={openPost}
+                        onClose={() => setOpenPost(null)}
+                        userId={user?.id}
+                        userFullName={fullName}
+                        userAvatarColor={userAvatarColor}
+                        onLikePost={handleModalLike}
+                    />
+                )}
+                {showCreate && (
+                    <CreatePostModal
+                        key="create"
+                        onClose={() => setShowCreate(false)}
+                        onCreated={handlePostCreated}
+                        userId={user?.id}
+                        userFullName={fullName}
+                        userAvatarColor={userAvatarColor}
+                    />
+                )}
             </AnimatePresence>
         </div>
     );
