@@ -114,6 +114,15 @@ export async function togglePostLike(
     }
 }
 
+/** Delete a post by ID. RLS enforces admin-only on the DB side. */
+export async function deletePost(postId: string): Promise<void> {
+    const { error } = await supabase
+        .from("community_posts")
+        .delete()
+        .eq("id", postId);
+    if (error) throw error;
+}
+
 // ─── Comments ─────────────────────────────────────────────────────────────────
 
 /** Fetch all comments + replies for a post. Returns nested structure. */
