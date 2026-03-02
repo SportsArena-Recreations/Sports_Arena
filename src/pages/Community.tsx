@@ -379,7 +379,7 @@ function DiscussionModal({
                 </div>
 
                 {/* Scrollable body */}
-                <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6 space-y-6">
+                <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6 space-y-6 custom-scroll-hover">
                     <div>
                         <p className="text-sm text-white/65 leading-relaxed">{post.content}</p>
                         {post.tournament_date && (
@@ -890,7 +890,7 @@ export default function Community() {
     }, [posts, search, activeFilter]);
 
     return (
-        <div className="bg-[#020202] text-white min-h-screen font-sans">
+        <div className="bg-[#020202] text-white min-h-screen font-sans custom-scroll">
             {/* ── Hero ───────────────────────────────────────────────────── */}
             <section className="pt-16 pb-12 px-6 border-b border-white/[0.05] relative overflow-hidden bg-black">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-950/20 via-transparent to-purple-950/20 pointer-events-none" />
