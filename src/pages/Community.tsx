@@ -11,6 +11,7 @@ import {
     type DBPost,
     type DBComment,
     type PostCategory,
+    type SidebarTournament,
     fetchPosts,
     fetchPostLikes,
     createPost,
@@ -20,24 +21,12 @@ import {
     addComment,
     toggleCommentLike,
     fetchMemberCount,
+    fetchTrendingTopics,
+    fetchUpcomingTournaments,
     getAvatarColor,
     formatRelativeTime,
 } from "@/services/communityService";
 
-// ─── Static sidebar data ───────────────────────────────────────────────────────
-const TRENDING = [
-    "Abuja League Finals",
-    "Best clay courts in town",
-    "Looking for doubles partner",
-    "New facility hours",
-    "Sunday casual group",
-];
-
-const UPCOMING = [
-    { name: "Abuja Open", date: "Mar 15, 2026", sport: "Tennis" },
-    { name: "Summer Slam Festival", date: "Jun 10, 2026", sport: "Mixed" },
-    { name: "Indoor Soccer League", date: "Feb 25, 2026", sport: "Soccer" },
-];
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 function getInitials(name: string) {
@@ -602,7 +591,17 @@ function PostCard({
 }
 
 // ─── Sidebar ───────────────────────────────────────────────────────────────────
-function Sidebar({ memberCount, postCount }: { memberCount: number; postCount: number }) {
+function Sidebar({
+    memberCount,
+    postCount,
+    trendingTopics,
+    upcomingTournaments,
+}: {
+    memberCount: number;
+    postCount: number;
+    trendingTopics: string[];
+    upcomingTournaments: SidebarTournament[];
+}) {
     return (
         <aside className="hidden lg:flex flex-col gap-5 w-[300px] flex-shrink-0">
             {/* Community Stats */}
@@ -630,15 +629,19 @@ function Sidebar({ memberCount, postCount }: { memberCount: number; postCount: n
                     <h3 className="text-xs font-bold tracking-widest uppercase text-white/50">Trending Topics</h3>
                 </div>
                 <div className="flex flex-col gap-1">
-                    {TRENDING.map((topic, i) => (
-                        <button
-                            key={topic}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/55 hover:text-white hover:bg-white/[0.05] transition-all text-left"
-                        >
-                            <span className="text-[10px] font-bold tabular-nums text-white/20 w-4">{i + 1}</span>
-                            {topic}
-                        </button>
-                    ))}
+                    {trendingTopics.length === 0 ? (
+                        <p className="text-xs text-white/25 px-3 py-2">No posts yet</p>
+                    ) : (
+                        trendingTopics.map((topic, i) => (
+                            <button
+                                key={i}
+                                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-white/55 hover:text-white hover:bg-white/[0.05] transition-all text-left"
+                            >
+                                <span className="text-[10px] font-bold tabular-nums text-white/20 w-4">{i + 1}</span>
+                                <span className="truncate">{topic}</span>
+                            </button>
+                        ))
+                    )}
                 </div>
             </div>
 
@@ -649,20 +652,29 @@ function Sidebar({ memberCount, postCount }: { memberCount: number; postCount: n
                     <h3 className="text-xs font-bold tracking-widest uppercase text-white/50">Upcoming Tournaments</h3>
                 </div>
                 <div className="flex flex-col gap-3">
-                    {UPCOMING.map((t) => (
-                        <div
-                            key={t.name}
-                            className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-white/[0.1] transition-all"
-                        >
-                            <div className="min-w-0">
-                                <p className="text-sm font-semibold text-white/85 truncate">{t.name}</p>
-                                <p className="text-[10px] text-white/35 mt-0.5">{t.date} · {t.sport}</p>
+                    {upcomingTournaments.length === 0 ? (
+                        <p className="text-xs text-white/25 px-3 py-2">No upcoming tournaments</p>
+                    ) : (
+                        upcomingTournaments.map((t) => (
+                            <div
+                                key={t.id}
+                                className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-white/[0.1] transition-all"
+                            >
+                                <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-white/85 truncate">{t.name}</p>
+                                    <p className="text-[10px] text-white/35 mt-0.5">
+                                        {new Date(t.start_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · {t.sport}
+                                    </p>
+                                </div>
+                                <a
+                                    href={`/tournaments/${t.id}`}
+                                    className="flex-shrink-0 px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/[0.12] transition-all"
+                                >
+                                    Join
+                                </a>
                             </div>
-                            <a href="/tournaments" className="flex-shrink-0 px-3 py-1.5 rounded-full bg-white/[0.06] border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/[0.12] transition-all">
-                                Join
-                            </a>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </div>
             </div>
         </aside>
@@ -811,6 +823,8 @@ export default function Community() {
     const [posts, setPosts] = useState<DBPost[]>([]);
     const [loading, setLoading] = useState(true);
     const [memberCount, setMemberCount] = useState(0);
+    const [trendingTopics, setTrendingTopics] = useState<string[]>([]);
+    const [upcomingTournaments, setUpcomingTournaments] = useState<SidebarTournament[]>([]);
     const [search, setSearch] = useState("");
     const [activeFilter, setActiveFilter] = useState<PostFilter>("All");
     const [openPost, setOpenPost] = useState<DBPost | null>(null);
@@ -822,9 +836,11 @@ export default function Community() {
     const loadPosts = useCallback(async () => {
         setLoading(true);
         try {
-            const [rows, count] = await Promise.all([
+            const [rows, count, trending, tournaments] = await Promise.all([
                 fetchPosts(),
                 fetchMemberCount(),
+                fetchTrendingTopics(),
+                fetchUpcomingTournaments(),
             ]);
 
             if (user) {
@@ -835,6 +851,8 @@ export default function Community() {
             }
 
             setMemberCount(count);
+            setTrendingTopics(trending);
+            setUpcomingTournaments(tournaments);
         } finally {
             setLoading(false);
         }
@@ -1031,7 +1049,12 @@ export default function Community() {
                     </div>
 
                     {/* Sidebar */}
-                    <Sidebar memberCount={memberCount} postCount={posts.length} />
+                    <Sidebar
+                        memberCount={memberCount}
+                        postCount={posts.length}
+                        trendingTopics={trendingTopics}
+                        upcomingTournaments={upcomingTournaments}
+                    />
                 </div>
             </section>
 

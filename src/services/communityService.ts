@@ -225,6 +225,41 @@ export async function fetchMemberCount(): Promise<number> {
     return count ?? 0;
 }
 
+/** Top-5 post titles by likes — used for Trending Topics sidebar. */
+export async function fetchTrendingTopics(): Promise<string[]> {
+    const { data, error } = await supabase
+        .from("community_posts")
+        .select("title")
+        .order("likes_count", { ascending: false })
+        .order("comments_count", { ascending: false })
+        .limit(5);
+
+    if (error) return [];
+    return (data ?? []).map((r: { title: string }) => r.title);
+}
+
+/** Tournament shape for sidebar. */
+export interface SidebarTournament {
+    id: string;
+    name: string;
+    start_date: string;
+    sport: string;
+}
+
+/** Next 5 upcoming tournaments by start_date. */
+export async function fetchUpcomingTournaments(): Promise<SidebarTournament[]> {
+    const today = new Date().toISOString().split("T")[0];
+    const { data, error } = await supabase
+        .from("tournaments")
+        .select("id, name, start_date, sport")
+        .gte("start_date", today)
+        .order("start_date", { ascending: true })
+        .limit(5);
+
+    if (error) return [];
+    return (data ?? []) as SidebarTournament[];
+}
+
 /** Get user "colour" deterministically from their name initials. */
 export const AVATAR_COLORS = [
     "bg-blue-500",
