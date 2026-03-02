@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     Search, Plus, X, Heart, MessageCircle, Share2, ChevronRight, ChevronDown,
     Trophy, HelpCircle, MessageSquare, Megaphone, Flame, Calendar,
-    Users, Send, ThumbsUp, CornerDownRight, ArrowUpDown, Filter, Loader2, AlertCircle,
+    Users, Send, ThumbsUp, CornerDownRight, ArrowUpDown, Filter, Loader2, AlertCircle, Trash2,
 } from "lucide-react";
 import { Footer } from "@/components/layout/Footer";
 import { useAuth } from "@/context/AuthContext";
@@ -15,6 +15,7 @@ import {
     fetchPosts,
     fetchPostLikes,
     createPost,
+    deletePost,
     togglePostLike,
     fetchComments,
     fetchCommentLikes,
@@ -477,15 +478,21 @@ function PostCard({
     post,
     onOpen,
     userId,
+    isAdmin,
     onLike,
+    onDelete,
 }: {
     post: DBPost;
     onOpen: () => void;
     userId?: string;
+    isAdmin?: boolean;
     onLike: (postId: string, liked: boolean) => void;
+    onDelete: (postId: string) => void;
 }) {
     const [liked, setLiked] = useState(post.liked ?? false);
     const [likes, setLikes] = useState(post.likes_count);
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const meta = CATEGORY_META[post.category];
 
     const handleLike = async (e: React.MouseEvent) => {
@@ -501,6 +508,25 @@ function PostCard({
             setLiked(!next);
             setLikes((c) => (!next ? c + 1 : Math.max(c - 1, 0)));
             onLike(post.id, !next);
+        }
+    };
+
+    const handleDelete = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirmDelete) {
+            setConfirmDelete(true);
+            // Auto-reset after 3 seconds if user doesn't confirm
+            setTimeout(() => setConfirmDelete(false), 3000);
+            return;
+        }
+        setDeleting(true);
+        try {
+            await deletePost(post.id);
+            onDelete(post.id);
+        } catch (err) {
+            console.error("Delete failed:", err);
+            setDeleting(false);
+            setConfirmDelete(false);
         }
     };
 
@@ -577,6 +603,22 @@ function PostCard({
                         <Share2 size={13} strokeWidth={2} />
                         Share
                     </button>
+                    {isAdmin && (
+                        <button
+                            onClick={handleDelete}
+                            disabled={deleting}
+                            title={confirmDelete ? "Click again to confirm" : "Delete post"}
+                            className={`flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1.5 border transition-all ${confirmDelete
+                                ? "text-rose-400 border-rose-500/40 bg-rose-500/10 hover:bg-rose-500/20"
+                                : "text-white/30 border-white/10 hover:text-rose-400 hover:border-rose-500/30 hover:bg-rose-500/5"
+                                } disabled:opacity-40 disabled:cursor-not-allowed`}
+                        >
+                            {deleting
+                                ? <Loader2 size={12} className="animate-spin" />
+                                : <Trash2 size={12} strokeWidth={2} />}
+                            {confirmDelete ? "Confirm?" : "Delete"}
+                        </button>
+                    )}
                     <button
                         onClick={onOpen}
                         className="flex items-center gap-1.5 text-xs font-semibold text-white border border-white/10 rounded-full px-3 py-1.5 hover:bg-white/[0.08] hover:border-white/20 transition-all"
@@ -818,7 +860,7 @@ const FILTERS: PostFilter[] = ["All", "Tournament", "Discussion", "Question", "A
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 export default function Community() {
-    const { user, fullName } = useAuth();
+    const { user, fullName, isAdmin } = useAuth();
 
     const [posts, setPosts] = useState<DBPost[]>([]);
     const [loading, setLoading] = useState(true);
@@ -894,6 +936,11 @@ export default function Community() {
         setPosts((prev) => [{ ...post, liked: false }, ...prev]);
     };
 
+    const handleDeletePost = (postId: string) => {
+        setPosts((prev) => prev.filter((p) => p.id !== postId));
+        if (openPost?.id === postId) setOpenPost(null);
+    };
+
     const filtered = useMemo(() => {
         return posts.filter((p) => {
             const matchesFilter = activeFilter === "All" || p.category === activeFilter;
@@ -936,18 +983,6 @@ export default function Community() {
                         </h1>
                         <p className="text-lg text-white/40 mb-8">Connect. Discuss. Compete.</p>
 
-                        {/* Quick stats */}
-                        <div className="flex justify-center flex-wrap gap-10 sm:gap-20 mb-10">
-                            {[
-                                { label: "Members", value: memberCount },
-                                { label: "Discussions", value: posts.length },
-                            ].map((s) => (
-                                <div key={s.label} className="text-center">
-                                    <p className="text-3xl font-black text-white">{s.value}</p>
-                                    <p className="text-[10px] font-bold tracking-widest uppercase text-white/30 mt-1">{s.label}</p>
-                                </div>
-                            ))}
-                        </div>
 
                         {/* Search + Create */}
                         <div className="flex gap-3 max-w-2xl mx-auto">
@@ -960,13 +995,16 @@ export default function Community() {
                                     className="w-full bg-white/[0.05] border border-white/[0.10] rounded-2xl pl-11 pr-4 py-3 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/25 focus:bg-white/[0.07] transition-all"
                                 />
                             </div>
-                            <button
-                                onClick={() => user ? setShowCreate(true) : (window.location.href = "/login")}
-                                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-black text-sm font-bold tracking-wide hover:bg-white/90 transition-all flex-shrink-0"
-                            >
-                                <Plus size={15} strokeWidth={2.5} />
-                                {user ? "Create Post" : "Sign in to Post"}
-                            </button>
+                            {/* Only admins see the Create Post button */}
+                            {isAdmin && (
+                                <button
+                                    onClick={() => setShowCreate(true)}
+                                    className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-white text-black text-sm font-bold tracking-wide hover:bg-white/90 transition-all flex-shrink-0"
+                                >
+                                    <Plus size={15} strokeWidth={2.5} />
+                                    Create Post
+                                </button>
+                            )}
                         </div>
 
                         {/* Filter tabs */}
@@ -1042,7 +1080,9 @@ export default function Community() {
                                     post={p}
                                     onOpen={() => setOpenPost(p)}
                                     userId={user?.id}
+                                    isAdmin={isAdmin}
                                     onLike={handleCardLike}
+                                    onDelete={handleDeletePost}
                                 />
                             ))
                         )}

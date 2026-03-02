@@ -34,20 +34,38 @@ DROP POLICY IF EXISTS "posts_delete"   ON public.community_posts;
 CREATE POLICY "posts_select" ON public.community_posts
   FOR SELECT USING (true);
 
--- Authenticated users can insert their own posts
+-- Only admins can create posts
+-- Checks the profiles table for role = 'admin'
 CREATE POLICY "posts_insert" ON public.community_posts
   FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = author_id);
+  WITH CHECK (
+    auth.uid() = author_id
+    AND EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
 
--- Author or admin can update
+-- Only admins can update posts
 CREATE POLICY "posts_update" ON public.community_posts
   FOR UPDATE TO authenticated
-  USING (auth.uid() = author_id);
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
 
--- Author can delete own posts
+-- Only admins can delete posts
 CREATE POLICY "posts_delete" ON public.community_posts
   FOR DELETE TO authenticated
-  USING (auth.uid() = author_id);
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE id = auth.uid() AND role = 'admin'
+    )
+  );
+
 
 
 -- ─────────────────────────────────────────────
