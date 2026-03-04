@@ -65,7 +65,7 @@ const Facilities = () => {
     <div className="container py-10">
       <PageHeader
         title="Our Facilities"
-        description="Browse and book our world-class sports facilities."
+        description="Select a facility to book your session."
       />
 
       <div className="mb-8 flex flex-wrap gap-3 items-center justify-start">

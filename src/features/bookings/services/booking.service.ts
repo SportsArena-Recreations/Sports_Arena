@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { Booking, BookingStatus } from "../types";
 import { ServiceResponse, createServiceResponse } from "@/services/base.service";
+import { autoCompleteExpiredBookings } from "./auto-complete";
 
 function mapRow(row: Record<string, unknown>): Booking {
   return {
@@ -24,6 +25,9 @@ function mapRow(row: Record<string, unknown>): Booking {
 export const bookingService = {
   /** Admin: get all bookings with facility name joined */
   async getAll(): Promise<ServiceResponse<Booking[]>> {
+    // Auto-complete any confirmed bookings whose date has already passed
+    await autoCompleteExpiredBookings();
+
     const { data, error } = await supabase
       .from("bookings")
       .select("*, facilities(name)")
@@ -41,6 +45,9 @@ export const bookingService = {
   async getMine(): Promise<ServiceResponse<Booking[]>> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return createServiceResponse([], "User not logged in");
+
+    // Auto-complete any of this user's confirmed bookings whose date has already passed
+    await autoCompleteExpiredBookings(user.id);
 
     const { data, error } = await supabase
       .from("bookings")
